@@ -84,8 +84,17 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
       const successUrl = `${baseUrl}?success=1`;
       const cancelUrl = `${baseUrl}?cancel=1`;
 
-      // 1. Format the date to ISO string (YYYY-MM-DD) to ensure stability
-      const isoDate = booking.selectedDate ? new Date(booking.selectedDate).toISOString().split('T')[0] : '';
+      // 1. Format the date to ISO string (YYYY-MM-DD) using LOCAL date components
+      // CRITICAL: Do NOT use toISOString() as it converts to UTC, shifting dates backwards
+      // for timezones ahead of UTC (e.g., user selects Dec 22 in UTC+2, toISOString gives Dec 21)
+      let isoDate = '';
+      if (booking.selectedDate) {
+        const d = new Date(booking.selectedDate);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+        const day = String(d.getDate()).padStart(2, '0');
+        isoDate = `${year}-${month}-${day}`; // Local date, timezone-safe
+      }
 
       // 2. Format start and end times for slot reservation
       // Use string manipulation to avoid timezone conversion issues
