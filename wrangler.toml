@@ -1,0 +1,3 @@
+name = "butkevica-dental-booking"
+pages_build_output_dir = "src/widget/butkevica-dental-booking/dist"
+compatibility_date = "2025-11-01"

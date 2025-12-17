@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "Dental booking automation workspace",
     "scripts": {
-        "build": "cd src/widget/butkevica-dental-booking && npm install && npm run build",
+        "build": "cd src/widget/butkevica-dental-booking && npm install && npm run build && cp -r functions dist/",
         "dev": "cd src/widget/butkevica-dental-booking && npm run dev"
     },
     "private": true
