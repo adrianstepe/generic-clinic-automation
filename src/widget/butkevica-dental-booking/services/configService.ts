@@ -14,7 +14,7 @@ interface ServiceRow {
   clinic_id: string;
   name: Record<string, string>; // jsonb
   description: Record<string, string> | null; // jsonb
-  price: number;
+  price_cents: number; // Database stores price in cents (4500 = €45.00)
   duration_minutes: number;
   category: ServiceCategory | null;
   icon: string | null;
@@ -86,7 +86,7 @@ function mapServiceRowToService(row: ServiceRow): Service {
       [Language.LV]: getDesc('lv'),
       [Language.RU]: getDesc('ru'),
     },
-    price: row.price, // DB stores as numeric (e.g. 50.00), frontend expects number.
+    price: row.price_cents / 100, // Convert cents to EUR (4500 -> 45.00)
     durationMinutes: row.duration_minutes,
     icon: row.icon || '',
     category: row.category || inferCategoryFromName(row.name), // Infer if not set

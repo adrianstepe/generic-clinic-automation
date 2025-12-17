@@ -553,7 +553,72 @@ User sees: "This time slot is no longer available"
 2. Deploy widget changes (`git push`)
 3. Import and activate n8n workflow
 
----
+### 6.13 Build Optimization & Configuration Fixes (Updated 2025-12-17)
+
+**Problem Solved:** Cloudflare Pages build failures due to:
+1. Large bundle size (584KB > 500KB warning limit)
+2. Missing output directory configuration
+3. Widget price display showing 0 instead of actual prices
+
+**Code Splitting (Vite):**
+Bundle reduced from 584KB to 317KB (45% reduction) via `manualChunks`:
+```typescript
+// vite.config.ts
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+        'vendor-supabase': ['@supabase/supabase-js'],
+        'vendor-utils': ['date-fns', 'clsx', 'tailwind-merge'],
+        'vendor-icons': ['lucide-react'],
+      }
+    }
+  }
+}
+```
+
+**Cloudflare Pages Configuration:**
+Added `wrangler.toml` at repo root pointing to nested widget output:
+```toml
+name = "butkevica-dental-booking"
+pages_build_output_dir = "src/widget/butkevica-dental-booking/dist"
+compatibility_date = "2025-11-01"
+```
+
+**Build Script Updates:**
+```json
+// package.json (root)
+"build": "cd src/widget/butkevica-dental-booking && npm install && npm run build && cp -r functions dist/"
+```
+
+**Price Display Fix:**
+Database stores prices in `price_cents` (4500 = €45.00) but widget expected `price`. Fixed in `configService.ts`:
+```typescript
+// Before (broken):
+price: row.price
+
+// After (fixed):
+price: row.price_cents / 100
+```
+
+**Cloudflare Environment Variables Required:**
+| Variable | Value |
+|----------|-------|
+| `VITE_SUPABASE_URL` | `https://[PROJECT_ID].supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
+
+> ⚠️ These must be set in Cloudflare Pages dashboard → Settings → Environment variables, then redeploy.
+
+**Files Changed:**
+| File | Change |
+|------|--------|
+| `vite.config.ts` | Added code splitting |
+| `wrangler.toml` (root) | NEW: Cloudflare Pages config |
+| `package.json` (root) | Updated build script |
+| `services/configService.ts` | Fixed price conversion |
+
+
 
 ## 7. Required n8n VPS Configuration
 
