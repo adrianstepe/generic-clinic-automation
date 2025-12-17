@@ -1,0 +1,297 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "cancellation-webhook",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                -400,
+                0
+            ],
+            "id": "webhook-trigger",
+            "name": "Cancellation Webhook",
+            "webhookId": "cancellation-webhook-id"
+        },
+        {
+            "parameters": {
+                "jsCode": "const item = $input.first();\nconst data = item.json.body || item.json;\n\n// ========================\n// CLINIC CONFIGURATION\n// ========================\nconst CLINIC_EMAIL = 'info@drbutkevicadentalpractice.com';\nconst CLINIC_ADDRESS = 'Dzirnavu iela 45, Centra rajons, Rīga, LV-1010';\nconst GOOGLE_MAPS_URL = 'https://www.google.com/maps/place/Dr.+Butk%C4%93vi%C4%8Das+zob%C4%81rstniec%C4%ABbas+prakse/@56.9571467,24.1135175,17z';\n\n// Extract data from webhook\nconst bookingId = data.booking_id;\nconst customerName = data.customer_name || 'Patient';\nconst customerEmail = data.customer_email;\nconst customerPhone = data.customer_phone;\nconst serviceName = data.service_name || 'Dental Service';\nconst startTime = data.start_time;\nconst amountPaid = data.amount_paid || 20;\nconst paymentIntentId = data.payment_intent_id;\nconst stripeSessionId = data.stripe_session_id;\nconst isRefundEligible = data.is_refund_eligible === true;\nconst language = (data.language || 'en').toLowerCase();\nconst cancelledAt = data.cancelled_at || new Date().toISOString();\n\n// Parse date for display\nconst appointmentDate = new Date(startTime);\nconst formattedDate = appointmentDate.toLocaleDateString('en-GB', { \n    weekday: 'long', \n    year: 'numeric', \n    month: 'long', \n    day: 'numeric' \n});\nconst formattedTime = appointmentDate.toLocaleTimeString('en-GB', { \n    hour: '2-digit', \n    minute: '2-digit' \n});\n\n// ========================\n// EMAIL TEMPLATES\n// ========================\nlet emailSubject, emailBody;\n\nif (language === 'lv') {\n    emailSubject = `❌ Vizīte Atcelta: ${formattedDate}`;\n    emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }\n    .header h1 { margin: 0; font-size: 24px; }\n    .content { background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; }\n    .info-card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }\n    .info-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }\n    .info-row:last-child { border-bottom: none; }\n    .info-icon { font-size: 20px; margin-right: 12px; }\n    .refund-box { background: #dcfce7; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n    .no-refund-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n    .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>❌ Vizīte Atcelta</h1>\n  </div>\n  <div class=\"content\">\n    <p>Labdien, <strong>${customerName}</strong>.</p>\n    <p>Jūsu vizīte ir veiksmīgi atcelta.</p>\n    \n    <div class=\"info-card\">\n      <div style=\"font-weight: 600; margin-bottom: 15px; color: #1e293b;\">Atceltās vizītes informācija:</div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📅</span>\n        <div><strong>Datums:</strong> ${formattedDate}</div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">⏰</span>\n        <div><strong>Laiks:</strong> ${formattedTime}</div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">🦷</span>\n        <div><strong>Pakalpojums:</strong> ${serviceName}</div>\n      </div>\n    </div>\n    \n    ${isRefundEligible ? \n      '<div class=\"refund-box\">✅ <strong>Atmaksa Apstrādē:</strong> Jūsu depozīts €' + amountPaid + ' tiks atmaksāts 5-10 darba dienu laikā.</div>' : \n      '<div class=\"no-refund-box\">⚠️ <strong>Atmaksa Nav Pieejama:</strong> Tā kā vizīte tika atcelta mazāk nekā 24 stundas pirms sākuma, depozīts €' + amountPaid + ' netiek atmaksāts.</div>'\n    }\n    \n    <p>Ja vēlaties pieteikt jaunu vizīti, lūdzu, apmeklējiet mūsu vietni vai sazinieties ar mums.</p>\n    \n    <div class=\"footer\">\n      <p>Ar cieņu,<br><strong>Butkeviča Dental Practice</strong></p>\n      <p style=\"font-size: 12px; color: #94a3b8;\">${CLINIC_ADDRESS}</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n} else if (language === 'ru') {\n    emailSubject = `❌ Запись Отменена: ${formattedDate}`;\n    emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }\n    .header h1 { margin: 0; font-size: 24px; }\n    .content { background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; }\n    .info-card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }\n    .info-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }\n    .info-row:last-child { border-bottom: none; }\n    .info-icon { font-size: 20px; margin-right: 12px; }\n    .refund-box { background: #dcfce7; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n    .no-refund-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n    .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>❌ Запись Отменена</h1>\n  </div>\n  <div class=\"content\">\n    <p>Здравствуйте, <strong>${customerName}</strong>.</p>\n    <p>Ваша запись успешно отменена.</p>\n    \n    <div class=\"info-card\">\n      <div style=\"font-weight: 600; margin-bottom: 15px; color: #1e293b;\">Информация об отменённой записи:</div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📅</span>\n        <div><strong>Дата:</strong> ${formattedDate}</div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">⏰</span>\n        <div><strong>Время:</strong> ${formattedTime}</div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">🦷</span>\n        <div><strong>Услуга:</strong> ${serviceName}</div>\n      </div>\n    </div>\n    \n    ${isRefundEligible ? \n      '<div class=\"refund-box\">✅ <strong>Возврат Обрабатывается:</strong> Ваш депозит €' + amountPaid + ' будет возвращён в течение 5-10 рабочих дней.</div>' : \n      '<div class=\"no-refund-box\">⚠️ <strong>Возврат Невозможен:</strong> Поскольку запись была отменена менее чем за 24 часа, депозит €' + amountPaid + ' не подлежит возврату.</div>'\n    }\n    \n    <p>Если вы хотите записаться снова, пожалуйста, посетите наш сайт или свяжитесь с нами.</p>\n    \n    <div class=\"footer\">\n      <p>С уважением,<br><strong>Butkeviča Dental Practice</strong></p>\n      <p style=\"font-size: 12px; color: #94a3b8;\">${CLINIC_ADDRESS}</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n} else {\n    // English (default)\n    emailSubject = `❌ Appointment Cancelled: ${formattedDate}`;\n    emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }\n    .header h1 { margin: 0; font-size: 24px; }\n    .content { background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; }\n    .info-card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }\n    .info-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }\n    .info-row:last-child { border-bottom: none; }\n    .info-icon { font-size: 20px; margin-right: 12px; }\n    .refund-box { background: #dcfce7; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n    .no-refund-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n    .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>❌ Appointment Cancelled</h1>\n  </div>\n  <div class=\"content\">\n    <p>Hi <strong>${customerName}</strong>,</p>\n    <p>Your appointment has been successfully cancelled.</p>\n    \n    <div class=\"info-card\">\n      <div style=\"font-weight: 600; margin-bottom: 15px; color: #1e293b;\">Cancelled Appointment Details:</div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📅</span>\n        <div><strong>Date:</strong> ${formattedDate}</div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">⏰</span>\n        <div><strong>Time:</strong> ${formattedTime}</div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">🦷</span>\n        <div><strong>Service:</strong> ${serviceName}</div>\n      </div>\n    </div>\n    \n    ${isRefundEligible ? \n      '<div class=\"refund-box\">✅ <strong>Refund Processing:</strong> Your deposit of €' + amountPaid + ' will be refunded within 5-10 business days.</div>' : \n      '<div class=\"no-refund-box\">⚠️ <strong>Refund Not Available:</strong> Since the appointment was cancelled less than 24 hours before, the €' + amountPaid + ' deposit is non-refundable.</div>'\n    }\n    \n    <p>If you would like to book another appointment, please visit our website or contact us.</p>\n    \n    <div class=\"footer\">\n      <p>Best regards,<br><strong>Butkeviča Dental Practice</strong></p>\n      <p style=\"font-size: 12px; color: #94a3b8;\">${CLINIC_ADDRESS}</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n}\n\n// Telegram message for clinic\nconst telegramMessage = `❌ APPOINTMENT CANCELLED\\n\\n👤 ${customerName}\\n📧 ${customerEmail}\\n📞 ${customerPhone || 'N/A'}\\n\\n📅 Was: ${formattedDate} ${formattedTime}\\n🦷 Service: ${serviceName}\\n\\n💰 Refund: ${isRefundEligible ? 'YES - €' + amountPaid + ' to be refunded' : 'NO - <24h notice'}\\n\\n⏰ Cancelled at: ${new Date(cancelledAt).toLocaleString()}`;\n\nreturn [{\n    json: {\n        booking_id: bookingId,\n        customer_name: customerName,\n        customer_email: customerEmail,\n        customer_phone: customerPhone,\n        service_name: serviceName,\n        start_time: startTime,\n        amount_paid: amountPaid,\n        payment_intent_id: paymentIntentId,\n        stripe_session_id: stripeSessionId,\n        is_refund_eligible: isRefundEligible,\n        language: language,\n        cancelled_at: cancelledAt,\n        email_subject: emailSubject,\n        email_body: emailBody,\n        telegram_message: telegramMessage\n    }\n}];"
+            },
+            "name": "Process Cancellation Data",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -160,
+                0
+            ],
+            "id": "process-cancellation-data"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.is_refund_eligible }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "name": "Check Refund Eligibility",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                80,
+                0
+            ],
+            "id": "check-refund-eligibility"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.stripe.com/v1/refunds",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBasicAuth",
+                "sendBody": true,
+                "contentType": "form-urlencoded",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "payment_intent",
+                            "value": "={{ $('Process Cancellation Data').first().json.payment_intent_id }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Process Stripe Refund",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                320,
+                -100
+            ],
+            "id": "process-stripe-refund",
+            "credentials": {
+                "httpBasicAuth": {
+                    "id": "stripe-api-key",
+                    "name": "Stripe API Key"
+                }
+            },
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Refund was skipped - not eligible\nconst data = $('Process Cancellation Data').first().json;\nreturn [{ json: { ...data, refund_status: 'not_eligible' } }];"
+            },
+            "name": "Skip Refund",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                320,
+                100
+            ],
+            "id": "skip-refund"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Merge refund result with original data\nconst originalData = $('Process Cancellation Data').first().json;\nconst refundResult = $input.first()?.json;\n\nlet refundStatus = 'processed';\nif (refundResult?.error) {\n    refundStatus = 'failed';\n}\n\nreturn [{ json: { ...originalData, refund_status: refundStatus, refund_result: refundResult } }];"
+            },
+            "name": "Merge Refund Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                540,
+                -100
+            ],
+            "id": "merge-refund-result"
+        },
+        {
+            "parameters": {
+                "operation": "update",
+                "tableId": "bookings",
+                "filterType": "string",
+                "filterString": "={{ 'id=eq.' + $json.booking_id }}",
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "status",
+                            "fieldValue": "cancelled"
+                        },
+                        {
+                            "fieldId": "cancelled_at",
+                            "fieldValue": "={{ $json.cancelled_at }}"
+                        },
+                        {
+                            "fieldId": "refund_status",
+                            "fieldValue": "={{ $json.refund_status }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Update Supabase",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                760,
+                0
+            ],
+            "id": "update-supabase",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "sendTo": "={{ $('Process Cancellation Data').first().json.customer_email }}",
+                "subject": "={{ $('Process Cancellation Data').first().json.email_subject }}",
+                "emailType": "html",
+                "message": "={{ $('Process Cancellation Data').first().json.email_body }}",
+                "options": {}
+            },
+            "name": "Send Cancellation Email",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                980,
+                0
+            ],
+            "id": "send-cancellation-email",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "bsHsQyITlAn3DBQk",
+                    "name": "Gmail account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "7408240811",
+                "text": "={{ $('Process Cancellation Data').first().json.telegram_message }}",
+                "additionalFields": {}
+            },
+            "name": "Alert Clinic via Telegram",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1200,
+                0
+            ],
+            "id": "alert-telegram",
+            "credentials": {
+                "telegramApi": {
+                    "id": "O3M9P0psuAlOvjZg",
+                    "name": "Telegram account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Cancellation Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Process Cancellation Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Cancellation Data": {
+            "main": [
+                [
+                    {
+                        "node": "Check Refund Eligibility",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Refund Eligibility": {
+            "main": [
+                [
+                    {
+                        "node": "Process Stripe Refund",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Skip Refund",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Stripe Refund": {
+            "main": [
+                [
+                    {
+                        "node": "Merge Refund Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Skip Refund": {
+            "main": [
+                [
+                    {
+                        "node": "Update Supabase",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Merge Refund Result": {
+            "main": [
+                [
+                    {
+                        "node": "Update Supabase",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Update Supabase": {
+            "main": [
+                [
+                    {
+                        "node": "Send Cancellation Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Cancellation Email": {
+            "main": [
+                [
+                    {
+                        "node": "Alert Clinic via Telegram",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "edb1e678c20bb2dc211861028fa5a0da62086103c19f921423bcdc604ef1f332"
+    }
+}
