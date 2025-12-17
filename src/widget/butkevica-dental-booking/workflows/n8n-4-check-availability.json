@@ -1,0 +1,159 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "path": "availability",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                32,
+                -80
+            ],
+            "id": "d2367908-d7f2-45ca-b426-fbc9d8188978",
+            "name": "Webhook",
+            "webhookId": "ad244579-700a-401a-b341-81d34547f68a"
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "tableId": "clinics",
+                "returnAll": false,
+                "limit": 1,
+                "filterType": "string",
+                "filterString": "={{ 'id.eq.' + $json.query.clinicId }}"
+            },
+            "name": "Fetch Clinic",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                256,
+                -80
+            ],
+            "id": "fetch-clinic-node",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "tableId": "bookings",
+                "returnAll": true,
+                "filterType": "string",
+                "filterString": "={{ 'and=(start_time.gte.' + $('Webhook').first().json.query.date + 'T00:00:00,start_time.lte.' + $('Webhook').first().json.query.date + 'T23:59:59,clinic_id.eq.' + $('Webhook').first().json.query.clinicId + ')' }}"
+            },
+            "alwaysOutputData": true,
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                480,
+                -80
+            ],
+            "id": "718a06e6-66f8-4934-80eb-04310a829155",
+            "name": "Supabase",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "event",
+                "operation": "getAll",
+                "calendar": {
+                    "__rl": true,
+                    "mode": "id",
+                    "value": "={{ $('Fetch Clinic').first().json.settings.google_calendar_id || 'primary' }}"
+                },
+                "timeMin": "={{ $('Webhook').first().json.query.date }}T00:00:00",
+                "timeMax": "={{ $('Webhook').first().json.query.date }}T23:59:59"
+            },
+            "alwaysOutputData": true,
+            "type": "n8n-nodes-base.googleCalendar",
+            "typeVersion": 1.3,
+            "position": [
+                704,
+                -80
+            ],
+            "id": "d1ea8dee-37a9-4a9c-9d8f-61999bb8b530",
+            "name": "Google Calendar",
+            "credentials": {
+                "googleCalendarOAuth2Api": {
+                    "id": "MC4P3mZxV4TOWrs8",
+                    "name": "Google Calendar account 2"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Inputs\nconst webhookData = $('Webhook').first();\nconst requestedDate = webhookData ? webhookData.json.query.date : null;\n\nif (!requestedDate) {\n  return { slots: [] };\n}\n\n// Safely get bookings (default to empty array if none found)\nlet dbBookings = [];\nlet gCalBusy = [];\n\ntry {\n  dbBookings = $('Supabase').all().map(item => item.json);\n} catch(e) {}\n\ntry {\n  gCalBusy = $('Google Calendar').all().map(item => item.json);\n} catch(e) {}\n\n// SLOT LOCK FILTERING: Only consider bookings that actually block availability\n// 1. Confirmed/completed bookings always block\n// 2. Pending bookings with active (non-expired) locks block\nconst now = Date.now();\nconst blockedBookings = dbBookings.filter(booking => {\n  // Confirmed/completed always block\n  if (booking.status === 'confirmed' || booking.status === 'completed') {\n    return true;\n  }\n  // Pending with active lock blocks\n  if (booking.status === 'pending' && booking.slot_lock_expires_at) {\n    const lockExpiry = new Date(booking.slot_lock_expires_at).getTime();\n    return lockExpiry > now;\n  }\n  // Cancelled or expired locks don't block\n  return false;\n});\n\n// Configuration: Clinic Hours (09:00 - 17:00)\nconst startHour = 9;\nconst endHour = 17;\nconst slotDurationMinutes = 60;\n\n// Generate slots as simple strings first to avoid timezone confusion\nconst slots = [];\nfor (let h = startHour; h < endHour; h++) {\n  const timeStr = `${h.toString().padStart(2, '0')}:00`;\n  const slotIso = `${requestedDate}T${timeStr}:00`;\n  slots.push({ time: timeStr, iso: slotIso, available: true });\n}\n\n// Helper: Check overlap\nconst isBusy = (slotIso, busyStartIso, busyEndIso) => {\n  if (!busyStartIso || !busyEndIso) return false;\n  const slotStart = new Date(slotIso).getTime();\n  const slotEnd = slotStart + (slotDurationMinutes * 60 * 1000);\n  const busyStart = new Date(busyStartIso).getTime();\n  const busyEnd = new Date(busyEndIso).getTime();\n  return (slotStart < busyEnd && slotEnd > busyStart);\n};\n\n// Filter availability\nconst finalSlots = slots.map(slot => {\n  let isTaken = false;\n\n  // 1. Check DB (only blocked bookings)\n  for (const booking of blockedBookings) {\n    if (booking && isBusy(slot.iso, booking.start_time, booking.end_time)) {\n      isTaken = true; break;\n    }\n  }\n\n  // 2. Check GCal\n  if (!isTaken) {\n    for (const event of gCalBusy) {\n      if (event) {\n        const start = event.start?.dateTime || event.start?.date;\n        const end = event.end?.dateTime || event.end?.date;\n        if (isBusy(slot.iso, start, end)) {\n          isTaken = true; break;\n        }\n      }\n    }\n  }\n\n  return { time: slot.time, available: !isTaken };\n});\n\nreturn { slots: finalSlots };"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                928,
+                -80
+            ],
+            "id": "c4fe87dd-5e14-424e-874a-f5a05a63f088",
+            "name": "Availability Logic"
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Clinic",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Clinic": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Supabase": {
+            "main": [
+                [
+                    {
+                        "node": "Google Calendar",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Calendar": {
+            "main": [
+                [
+                    {
+                        "node": "Availability Logic",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "instanceId": "edb1e678c20bb2dc211861028fa5a0da62086103c19f921423bcdc604ef1f332"
+    }
+}

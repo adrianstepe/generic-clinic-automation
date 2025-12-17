@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancel Appointment | Butkeviča Dental</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --danger: #dc2626;
+            --danger-dark: #b91c1c;
+            --warning: #f59e0b;
+            --success: #16a34a;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-400: #94a3b8;
+            --gray-600: #475569;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--gray-800);
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .booking-card {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .booking-card h3 {
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row .icon {
+            font-size: 18px;
+            margin-right: 12px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .info-row .label {
+            color: var(--gray-600);
+            font-size: 13px;
+        }
+
+        .info-row .value {
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-left: auto;
+        }
+
+        .refund-status {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .refund-status.eligible {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+            color: #166534;
+        }
+
+        .refund-status.not-eligible {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+        }
+
+        .refund-status .icon {
+            font-size: 24px;
+        }
+
+        .refund-status .text strong {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .refund-status .text span {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .warning-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 4px solid var(--danger);
+            border-radius: 0 8px 8px 0;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .warning-box p {
+            font-size: 14px;
+            color: #991b1b;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger:disabled {
+            background: var(--gray-400);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--gray-600);
+            border: 1px solid var(--gray-200);
+            margin-top: 12px;
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .result {
+            display: none;
+            text-align: center;
+            padding: 40px 24px;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .result h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .result p {
+            color: var(--gray-600);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .error-message {
+            display: none;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            color: #991b1b;
+            font-size: 14px;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .language-selector {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .lang-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            background: white;
+            color: var(--gray-600);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 16px;
+            color: var(--gray-400);
+            font-size: 12px;
+            border-top: 1px solid var(--gray-100);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Loading State -->
+        <div id="loadingState" class="loading active">
+            <div class="spinner"></div>
+            <p id="loadingText">Loading appointment details...</p>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" style="display: none;">
+            <div class="header">
+                <h1 id="headerTitle">Cancel Appointment</h1>
+                <p>Butkeviča Dental Practice</p>
+            </div>
+
+            <div class="content">
+                <div class="language-selector">
+                    <button class="lang-btn" data-lang="en">English</button>
+                    <button class="lang-btn" data-lang="lv">Latviešu</button>
+                    <button class="lang-btn" data-lang="ru">Русский</button>
+                </div>
+
+                <div class="booking-card">
+                    <h3 id="detailsLabel">Appointment Details</h3>
+                    <div class="info-row">
+                        <span class="icon">📅</span>
+                        <span class="label" id="dateLabel">Date</span>
+                        <span class="value" id="bookingDate">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="icon">⏰</span>
+                        <span class="label" id="timeLabel">Time</span>
+                        <span class="value" id="bookingTime">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="icon">🦷</span>
+                        <span class="label" id="serviceLabel">Service</span>
+                        <span class="value" id="bookingService">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="icon">💳</span>
+                        <span class="label" id="depositLabel">Deposit Paid</span>
+                        <span class="value" id="depositAmount">-</span>
+                    </div>
+                </div>
+
+                <div id="refundEligible" class="refund-status eligible" style="display: none;">
+                    <span class="icon">✅</span>
+                    <div class="text">
+                        <strong id="refundTitle">Refund Eligible</strong>
+                        <span id="refundDesc">Your deposit will be refunded within 5-10 business days.</span>
+                    </div>
+                </div>
+
+                <div id="refundNotEligible" class="refund-status not-eligible" style="display: none;">
+                    <span class="icon">⚠️</span>
+                    <div class="text">
+                        <strong id="noRefundTitle">Refund Not Available</strong>
+                        <span id="noRefundDesc">Cancellations less than 24h before the appointment are not eligible for
+                            refund.</span>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <p id="warningText">⚠️ This action cannot be undone. Your appointment will be permanently cancelled.
+                    </p>
+                </div>
+
+                <div id="errorMessage" class="error-message"></div>
+
+                <button id="cancelBtn" class="btn btn-danger" onclick="confirmCancellation()">
+                    <span id="cancelBtnText">❌ Confirm Cancellation</span>
+                </button>
+
+                <a href="/" class="btn btn-secondary" id="backBtn">← Go Back</a>
+            </div>
+
+            <div class="footer">
+                <p>Dzirnavu iela 45, Centra rajons, Rīga, LV-1010</p>
+            </div>
+        </div>
+
+        <!-- Success Result -->
+        <div id="successResult" class="result">
+            <div class="icon">✅</div>
+            <h2 id="successTitle">Appointment Cancelled</h2>
+            <p id="successDesc">Your appointment has been cancelled. You will receive a confirmation email shortly.</p>
+            <a href="/" class="btn btn-secondary" id="homeBtn">Return to Home</a>
+        </div>
+
+        <!-- Error Result -->
+        <div id="errorResult" class="result">
+            <div class="icon">❌</div>
+            <h2 id="errorTitle">Error</h2>
+            <p id="errorDesc">An error occurred while processing your cancellation.</p>
+            <a href="/" class="btn btn-secondary">Return to Home</a>
+        </div>
+    </div>
+
+    <script>
+        // Translations
+        const translations = {
+            en: {
+                headerTitle: 'Cancel Appointment',
+                detailsLabel: 'Appointment Details',
+                dateLabel: 'Date',
+                timeLabel: 'Time',
+                serviceLabel: 'Service',
+                depositLabel: 'Deposit Paid',
+                refundTitle: 'Refund Eligible',
+                refundDesc: 'Your deposit will be refunded within 5-10 business days.',
+                noRefundTitle: 'Refund Not Available',
+                noRefundDesc: 'Cancellations less than 24h before the appointment are not eligible for refund.',
+                warningText: '⚠️ This action cannot be undone. Your appointment will be permanently cancelled.',
+                cancelBtnText: '❌ Confirm Cancellation',
+                backBtn: '← Go Back',
+                successTitle: 'Appointment Cancelled',
+                successDesc: 'Your appointment has been cancelled. You will receive a confirmation email shortly.',
+                successDescRefund: 'Your appointment has been cancelled and your deposit will be refunded within 5-10 business days.',
+                successDescNoRefund: 'Your appointment has been cancelled. Due to the 24-hour cancellation policy, the deposit is non-refundable.',
+                homeBtn: 'Return to Home',
+                errorTitle: 'Error',
+                loadingText: 'Loading appointment details...',
+                processingText: 'Processing cancellation...',
+                alreadyCancelled: 'This appointment has already been cancelled.',
+                invalidToken: 'Invalid or expired cancellation link.'
+            },
+            lv: {
+                headerTitle: 'Atcelt Vizīti',
+                detailsLabel: 'Vizītes Informācija',
+                dateLabel: 'Datums',
+                timeLabel: 'Laiks',
+                serviceLabel: 'Pakalpojums',
+                depositLabel: 'Samaksātais Depozīts',
+                refundTitle: 'Atmaksa Pieejama',
+                refundDesc: 'Jūsu depozīts tiks atmaksāts 5-10 darba dienu laikā.',
+                noRefundTitle: 'Atmaksa Nav Pieejama',
+                noRefundDesc: 'Atcelšana mazāk nekā 24h pirms vizītes nav tiesīga uz atmaksu.',
+                warningText: '⚠️ Šo darbību nevar atsaukt. Jūsu vizīte tiks neatgriezeniski atcelta.',
+                cancelBtnText: '❌ Apstiprināt Atcelšanu',
+                backBtn: '← Atpakaļ',
+                successTitle: 'Vizīte Atcelta',
+                successDesc: 'Jūsu vizīte ir atcelta. Jūs drīzumā saņemsiet apstiprinājuma e-pastu.',
+                successDescRefund: 'Jūsu vizīte ir atcelta un depozīts tiks atmaksāts 5-10 darba dienu laikā.',
+                successDescNoRefund: 'Jūsu vizīte ir atcelta. Saskaņā ar 24 stundu atcelšanas politiku, depozīts netiek atmaksāts.',
+                homeBtn: 'Atgriezties Sākumā',
+                errorTitle: 'Kļūda',
+                loadingText: 'Ielādē vizītes informāciju...',
+                processingText: 'Apstrādā atcelšanu...',
+                alreadyCancelled: 'Šī vizīte jau ir atcelta.',
+                invalidToken: 'Nederīga vai novecojusi atcelšanas saite.'
+            },
+            ru: {
+                headerTitle: 'Отменить Запись',
+                detailsLabel: 'Детали Записи',
+                dateLabel: 'Дата',
+                timeLabel: 'Время',
+                serviceLabel: 'Услуга',
+                depositLabel: 'Оплаченный Депозит',
+                refundTitle: 'Возврат Возможен',
+                refundDesc: 'Ваш депозит будет возвращён в течение 5-10 рабочих дней.',
+                noRefundTitle: 'Возврат Невозможен',
+                noRefundDesc: 'Отмена менее чем за 24ч до записи не подлежит возврату.',
+                warningText: '⚠️ Это действие нельзя отменить. Ваша запись будет безвозвратно отменена.',
+                cancelBtnText: '❌ Подтвердить Отмену',
+                backBtn: '← Назад',
+                successTitle: 'Запись Отменена',
+                successDesc: 'Ваша запись отменена. Вы скоро получите подтверждение по email.',
+                successDescRefund: 'Ваша запись отменена, и депозит будет возвращён в течение 5-10 рабочих дней.',
+                successDescNoRefund: 'Ваша запись отменена. В соответствии с политикой отмены за 24 часа, депозит не подлежит возврату.',
+                homeBtn: 'На Главную',
+                errorTitle: 'Ошибка',
+                loadingText: 'Загрузка информации о записи...',
+                processingText: 'Обработка отмены...',
+                alreadyCancelled: 'Эта запись уже отменена.',
+                invalidToken: 'Недействительная или устаревшая ссылка для отмены.'
+            }
+        };
+
+        let currentLang = 'en';
+        let bookingData = null;
+        let isRefundEligible = false;
+
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const langParam = urlParams.get('lang');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (langParam && translations[langParam]) {
+                currentLang = langParam;
+            }
+            updateLanguage();
+            setupLanguageButtons();
+
+            if (!token) {
+                showError(translations[currentLang].invalidToken);
+                return;
+            }
+
+            await loadBookingDetails();
+        });
+
+        function setupLanguageButtons() {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentLang = btn.dataset.lang;
+                    updateLanguage();
+                    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+                if (btn.dataset.lang === currentLang) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function updateLanguage() {
+            const t = translations[currentLang];
+            document.querySelectorAll('[id]').forEach(el => {
+                if (t[el.id]) {
+                    el.textContent = t[el.id];
+                }
+            });
+        }
+
+        async function loadBookingDetails() {
+            try {
+                const response = await fetch(`/api/get-booking?token=${encodeURIComponent(token)}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load booking');
+                }
+
+                if (data.status === 'cancelled') {
+                    showError(translations[currentLang].alreadyCancelled);
+                    return;
+                }
+
+                bookingData = data;
+                displayBookingDetails(data);
+
+            } catch (error) {
+                showError(error.message || translations[currentLang].invalidToken);
+            }
+        }
+
+        function displayBookingDetails(data) {
+            document.getElementById('loadingState').classList.remove('active');
+            document.getElementById('mainContent').style.display = 'block';
+
+            // Parse and format date
+            const startTime = new Date(data.start_time);
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+
+            document.getElementById('bookingDate').textContent = startTime.toLocaleDateString(
+                currentLang === 'lv' ? 'lv-LV' : currentLang === 'ru' ? 'ru-RU' : 'en-US',
+                dateOptions
+            );
+            document.getElementById('bookingTime').textContent = startTime.toLocaleTimeString(
+                currentLang === 'lv' ? 'lv-LV' : currentLang === 'ru' ? 'ru-RU' : 'en-US',
+                timeOptions
+            );
+            document.getElementById('bookingService').textContent = data.service_name || 'Dental Service';
+            document.getElementById('depositAmount').textContent = `€${(data.amount_paid || 20).toFixed(2)}`;
+
+            // Check refund eligibility (>24h before appointment)
+            const now = new Date();
+            const hoursUntilAppointment = (startTime - now) / (1000 * 60 * 60);
+            isRefundEligible = hoursUntilAppointment > 24;
+
+            if (isRefundEligible) {
+                document.getElementById('refundEligible').style.display = 'flex';
+            } else {
+                document.getElementById('refundNotEligible').style.display = 'flex';
+            }
+
+            updateLanguage();
+        }
+
+        async function confirmCancellation() {
+            const btn = document.getElementById('cancelBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner" style="width: 20px; height: 20px; display: inline-block; vertical-align: middle; margin-right: 8px;"></span>' + translations[currentLang].processingText;
+
+            document.getElementById('errorMessage').classList.remove('active');
+
+            try {
+                const response = await fetch('/api/process-cancellation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        language: currentLang
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Cancellation failed');
+                }
+
+                // Show success - use API response for refund eligibility
+                const refundEligibleFromApi = data.refund_eligible;
+
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('successResult').classList.add('active');
+
+                const t = translations[currentLang];
+                document.getElementById('successTitle').textContent = t.successTitle;
+                // Show appropriate message based on actual refund eligibility from API
+                if (refundEligibleFromApi) {
+                    document.getElementById('successDesc').textContent = t.successDescRefund;
+                } else {
+                    document.getElementById('successDesc').textContent = t.successDescNoRefund;
+                }
+                document.getElementById('homeBtn').textContent = t.homeBtn;
+
+            } catch (error) {
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorMessage').classList.add('active');
+                btn.disabled = false;
+                btn.innerHTML = translations[currentLang].cancelBtnText;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').classList.remove('active');
+            document.getElementById('errorResult').classList.add('active');
+            document.getElementById('errorDesc').textContent = message;
+        }
+    </script>
+</body>
+
+</html>

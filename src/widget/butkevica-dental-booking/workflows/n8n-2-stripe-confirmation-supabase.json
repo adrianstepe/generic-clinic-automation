@@ -1,0 +1,325 @@
+{
+    "nodes": [
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                -352,
+                208
+            ],
+            "id": "38f5fe7e-3761-4199-87aa-b8cb31a2bfe9",
+            "name": "Error Trigger"
+        },
+        {
+            "parameters": {
+                "command": "=mkdir -p /home/node/.n8n/dlq && echo '{{ JSON.stringify({ timestamp: $now.toISO(), error: { message: String($json.error?.message || $json.message || \"Unknown error\").replace(/'/g, \"\"), node: $json.error?.node?.name || \"Unknown\" }, recovery_attempts: 0 }) }}' > /home/node/.n8n/dlq/failed-{{ $now.format('yyyyMMdd-HHmmss') }}.json && echo 'DLQ saved'"
+            },
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                -128,
+                208
+            ],
+            "id": "e8a394a5-2afd-426b-9ee5-4ed935542d5b",
+            "name": "Save to DLQ"
+        },
+        {
+            "parameters": {
+                "chatId": "7408240811",
+                "text": "=🚨 BOOKING FAILED - DLQ ACTIVATED!\n\nWorkflow: {{ $workflow.name }}\nError: {{ $('Error Trigger').first().json.error?.message || $('Error Trigger').first().json.message || 'Unknown' }}\nNode: {{ $('Error Trigger').first().json.error?.node?.name || 'Unknown' }}\nTime: {{ $now.format('yyyy-MM-dd HH:mm:ss') }}\n\n📁 Saved to: /home/node/.n8n/dlq/\n\n⚠️ Check n8n immediately!",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                96,
+                208
+            ],
+            "id": "ece359fd-b232-4f3a-b495-aea68021bc65",
+            "name": "Send a text message",
+            "webhookId": "2859d6bd-c6bf-4b76-94be-fae004b7425e",
+            "credentials": {
+                "telegramApi": {
+                    "id": "O3M9P0psuAlOvjZg",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "stripe-confirmation-webhook",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                -352,
+                -240
+            ],
+            "id": "296c85e2-47a9-4573-8e27-397d2ba8f1ff",
+            "name": "Webhook",
+            "webhookId": "45c1830b-9364-4b68-9c7d-e8ea2dade456"
+        },
+        {
+            "parameters": {
+                "jsCode": "const item = $input.first();\nconst rawJson = item.json;\nconst eventData = rawJson.body || rawJson;\n\nif (eventData.type !== 'checkout.session.completed') {\n  return [];\n}\n\n// ========================\n// HELPER: Proper Case Name\n// ========================\nconst formatName = (str) => {\n  if (!str) return 'Pacients';\n  return str.replace(/\\w\\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());\n};\n\n// ========================\n// HELPER: Generate Cancellation Token\n// ========================\nconst generateToken = () => {\n  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n  let token = '';\n  for (let i = 0; i < 32; i++) {\n    token += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return token;\n};\n\n// ========================\n// CLINIC CONFIGURATION\n// ========================\nconst CLINIC_EMAIL = 'info@drbutkevicadentalpractice.com';\nconst CLINIC_ADDRESS = 'Dzirnavu iela 45, Centra rajons, Rīga, LV-1010';\nconst GOOGLE_MAPS_URL = 'https://www.google.com/maps/place/Dr.+Butk%C4%93vi%C4%8Das+zob%C4%81rstniec%C4%ABbas+prakse/@56.9571467,24.1135175,17z';\nconst CANCELLATION_BASE_URL = 'https://test1-3oj.pages.dev/cancel-booking.html';\n\nconst dataObject = eventData?.data?.object || {};\nconst metadata = dataObject.metadata || {};\nconst customerDetails = dataObject.customer_details || {};\n\nconst rawName = customerDetails.name || metadata.customer_name || 'Pacients';\nconst customerName = formatName(rawName);\nlet customerEmail = customerDetails.email || metadata.customer_email || 'missing@error.com';\nconst rawPhone = customerDetails.phone || metadata.customer_phone || metadata.phone || '';\nconst amountPaid = ((dataObject.amount_total || 0) / 100).toFixed(2);\nconst bookingDate = metadata.booking_date;\nconst bookingTime = metadata.booking_time;\nconst serviceName = metadata.serviceName || 'Zobārstniecības vizīte';\nconst serviceDuration = parseInt(metadata.duration) || 60; // Duration in minutes, default 60\nconst clinicId = metadata.clinic_id || 'butkevica'; // SaaS: Extract clinic with fallback\n\n// Generate cancellation token\nconst cancellationToken = generateToken();\n\n// ========================\n// TIMEZONE-SAFE TIME HANDLING\n// ========================\n// Store times as ISO strings directly WITHOUT using JavaScript Date object\n// This avoids n8n server timezone conversion issues\n// The times represent Riga local time and are stored as-is in the database\n// The admin panel extracts raw values for display\nlet eventStart = null;\nlet eventEnd = null;\nlet calendarLink = '';\nlet calendarStart = '';\nlet calendarEnd = '';\n\nif (bookingDate && bookingTime) {\n  // Create ISO strings directly (stored as UTC timestamp but represents Riga time)\n  // Format: 2025-12-15T10:00:00.000Z\n  eventStart = `${bookingDate}T${bookingTime}:00.000Z`;\n  \n  // Calculate end time by parsing hours/minutes and adding duration\n  const [hours, minutes] = bookingTime.split(':').map(Number);\n  const totalMinutes = hours * 60 + minutes + serviceDuration;\n  const endHours = Math.floor(totalMinutes / 60) % 24;\n  const endMinutes = totalMinutes % 60;\n  const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;\n  eventEnd = `${bookingDate}T${endTime}:00.000Z`;\n  \n  // Generate Google Calendar Add Link (also uses raw times)\n  const calStart = `${bookingDate.replace(/-/g, '')}T${bookingTime.replace(':', '')}00Z`;\n  const calEnd = `${bookingDate.replace(/-/g, '')}T${endTime.replace(':', '')}00Z`;\n  const calTitle = encodeURIComponent(serviceName + ' - Butkeviča Dental');\n  const calDetails = encodeURIComponent('Jūsu zobārstniecības vizīte\\n\\nAdrese: ' + CLINIC_ADDRESS);\n  const calLocation = encodeURIComponent(CLINIC_ADDRESS);\n  calendarLink = `https://calendar.google.com/calendar/r/eventedit?text=${calTitle}&dates=${calStart}/${calEnd}&details=${calDetails}&location=${calLocation}`;\n  calendarStart = eventStart;\n  calendarEnd = eventEnd;\n}\n\nlet lang = 'lv';\nif (metadata.language) {\n  lang = metadata.language.toLowerCase();\n}\n\n// Cancellation link with token and language\nconst cancellationLink = `${CANCELLATION_BASE_URL}?token=${cancellationToken}&lang=${lang}`;\n\nlet emailSubject, emailBody;\n\n// ========================\n// HTML EMAIL TEMPLATES\n// ========================\nconst commonStyles = `\n  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }\n  .header { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }\n  .header h1 { margin: 0; font-size: 24px; }\n  .content { background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; }\n  .info-card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }\n  .info-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }\n  .info-row:last-child { border-bottom: none; }\n  .info-icon { font-size: 20px; margin-right: 12px; }\n  .info-label { color: #64748b; font-size: 14px; }\n  .info-value { font-weight: 600; color: #1e293b; }\n  .warning { background: #fef3c7; border-left: 44px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n  .warning-icon { font-size: 18px; margin-right: 8px; }\n  .btn { display: inline-block; background: #0d9488; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 10px 5px 10px 0; }\n  .btn-outline { background: white; color: #0d9488 !important; border: 2px solid #0d9488; }\n  .btn-cancel { background: white; color: #dc2626 !important; border: 2px solid #dc2626; font-size: 13px; padding: 10px 20px; }\n  .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }\n  .payment-confirmed { background: #dcfce7; color: #166534; padding: 12px 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; }\n  .cancel-section { text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0; }\n  .cancel-section p { font-size: 13px; color: #94a3b8; margin-bottom: 10px; }\n`;\n\nif (lang === 'lv') {\n  emailSubject = `✅ Pieraksts apstiprināts: ${bookingDate} plkst. ${bookingTime}`;\n  emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>${commonStyles}</style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>🦷 Vizīte Apstiprināta!</h1>\n  </div>\n  <div class=\"content\">\n    <p>Labdien, <strong>${customerName}</strong>!</p>\n    \n    <div class=\"payment-confirmed\">\n      ✅ Paldies! Jūsu maksājums <strong>€${amountPaid}</strong> apmērā ir saņemts.\n    </div>\n    \n    <div class=\"info-card\">\n      <div style=\"font-weight: 600; margin-bottom: 15px; color: #1e293b;\">Jūsu vizītes informācija:</div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📅</span>\n        <div><span class=\"info-label\">Datums:</span><br><span class=\"info-value\">${bookingDate}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">⏰</span>\n        <div><span class=\"info-label\">Laiks:</span><br><span class=\"info-value\">${bookingTime}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">🏥</span>\n        <div><span class=\"info-label\">Pakalpojums:</span><br><span class=\"info-value\">${serviceName}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📍</span>\n        <div><span class=\"info-label\">Adrese:</span><br><span class=\"info-value\"><a href=\"${GOOGLE_MAPS_URL}\" style=\"color: #0d9488;\">${CLINIC_ADDRESS}</a></span></div>\n      </div>\n    </div>\n    \n    <div style=\"text-align: center;\">\n      <a href=\"${calendarLink}\" class=\"btn\">📅 Pievienot Kalendāram</a>\n      <a href=\"${GOOGLE_MAPS_URL}\" class=\"btn btn-outline\">📍 Skatīt Kartē</a>\n    </div>\n    \n    <div class=\"warning\">\n      <span class=\"warning-icon\">⚠️</span>\n      <strong>Lūdzu, ņemiet vērā:</strong> Atceļot vizīti mazāk nekā 24 stundas pirms sākuma, rezervācijas maksa €${amountPaid} netiek atgriezta.\n    </div>\n    \n    <div class=\"cancel-section\">\n      <p>Nepieciešams atcelt vizīti?</p>\n      <a href=\"${cancellationLink}\" class=\"btn btn-cancel\">❌ Atcelt Vizīti</a>\n    </div>\n    \n    <div class=\"footer\">\n      <p>Ar cieņu,<br><strong>Butkeviča Dental Practice</strong></p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n} else if (lang === 'ru') {\n  emailSubject = `✅ Запись подтверждена: ${bookingDate} в ${bookingTime}`;\n  emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>${commonStyles}</style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>🦷 Запись Подтверждена!</h1>\n  </div>\n  <div class=\"content\">\n    <p>Здравствуйте, <strong>${customerName}</strong>!</p>\n    \n    <div class=\"payment-confirmed\">\n      ✅ Спасибо! Ваш платёж <strong>€${amountPaid}</strong> получен.\n    </div>\n    \n    <div class=\"info-card\">\n      <div style=\"font-weight: 600; margin-bottom: 15px; color: #1e293b;\">Информация о записи:</div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📅</span>\n        <div><span class=\"info-label\">Дата:</span><br><span class=\"info-value\">${bookingDate}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">⏰</span>\n        <div><span class=\"info-label\">Время:</span><br><span class=\"info-value\">${bookingTime}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">🏥</span>\n        <div><span class=\"info-label\">Услуга:</span><br><span class=\"info-value\">${serviceName}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📍</span>\n        <div><span class=\"info-label\">Адрес:</span><br><span class=\"info-value\"><a href=\"${GOOGLE_MAPS_URL}\" style=\"color: #0d9488;\">${CLINIC_ADDRESS}</a></span></div>\n      </div>\n    </div>\n    \n    <div style=\"text-align: center;\">\n      <a href=\"${calendarLink}\" class=\"btn\">📅 Добавить в Календарь</a>\n      <a href=\"${GOOGLE_MAPS_URL}\" class=\"btn btn-outline\">📍 Показать на Карте</a>\n    </div>\n    \n    <div class=\"warning\">\n      <span class=\"warning-icon\">⚠️</span>\n      <strong>Обратите внимание:</strong> При отмене записи менее чем за 24 часа депозит €${amountPaid} не возвращается.\n    </div>\n    \n    <div class=\"cancel-section\">\n      <p>Нужно отменить запись?</p>\n      <a href=\"${cancellationLink}\" class=\"btn btn-cancel\">❌ Отменить Запись</a>\n    </div>\n    \n    <div class=\"footer\">\n      <p>С уважением,<br><strong>Butkeviča Dental Practice</strong></p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n} else {\n  // English (default)\n  emailSubject = `✅ Appointment Confirmed: ${bookingDate} at ${bookingTime}`;\n  emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>${commonStyles}</style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>🦷 Appointment Confirmed!</h1>\n  </div>\n  <div class=\"content\">\n    <p>Hi <strong>${customerName}</strong>,</p>\n    \n    <div class=\"payment-confirmed\">\n      ✅ Thank you! Your payment of <strong>€${amountPaid}</strong> has been received.\n    </div>\n    \n    <div class=\"info-card\">\n      <div style=\"font-weight: 600; margin-bottom: 15px; color: #1e293b;\">Your appointment details:</div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📅</span>\n        <div><span class=\"info-label\">Date:</span><br><span class=\"info-value\">${bookingDate}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">⏰</span>\n        <div><span class=\"info-label\">Time:</span><br><span class=\"info-value\">${bookingTime}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">🏥</span>\n        <div><span class=\"info-label\">Service:</span><br><span class=\"info-value\">${serviceName}</span></div>\n      </div>\n      <div class=\"info-row\">\n        <span class=\"info-icon\">📍</span>\n        <div><span class=\"info-label\">Address:</span><br><span class=\"info-value\"><a href=\"${GOOGLE_MAPS_URL}\" style=\"color: #0d9488;\">${CLINIC_ADDRESS}</a></span></div>\n      </div>\n    </div>\n    \n    <div style=\"text-align: center;\">\n      <a href=\"${calendarLink}\" class=\"btn\">📅 Add to Calendar</a>\n      <a href=\"${GOOGLE_MAPS_URL}\" class=\"btn btn-outline\">📍 View on Map</a>\n    </div>\n    \n    <div class=\"warning\">\n      <span class=\"warning-icon\">⚠️</span>\n      <strong>Please note:</strong> Cancellations made less than 24 hours before your appointment will not receive a refund of the €${amountPaid} deposit.\n    </div>\n    \n    <div class=\"cancel-section\">\n      <p>Need to cancel your appointment?</p>\n      <a href=\"${cancellationLink}\" class=\"btn btn-cancel\">❌ Cancel Appointment</a>\n    </div>\n    \n    <div class=\"footer\">\n      <p>Best regards,<br><strong>Butkeviča Dental Practice</strong></p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n}\n\nconst bookingRef = 'BK-' + Date.now().toString(36).toUpperCase();\n\nconst result = {\n  // Fields for Supabase insert (must match table columns exactly)\n  customer_name: customerName,\n  customer_email: customerEmail,\n  customer_phone: rawPhone || null,\n  service_id: metadata.service_id || null,\n  service_name: serviceName,\n  start_time: eventStart,\n  end_time: eventEnd,\n  amount_paid: parseFloat(amountPaid),\n  status: 'confirmed',\n  stripe_session_id: dataObject.id || null,\n  payment_intent_id: dataObject.payment_intent || null,\n  amount_cents: dataObject.amount_total || null,\n  currency: 'EUR',\n  client_reference: bookingRef,\n  cancellation_token: cancellationToken,\n  language: lang,\n  clinic_id: clinicId, // SaaS: Add to output\n  // Extra fields for email/calendar (not inserted to DB)\n  email_subject: emailSubject,\n  email_body: emailBody,\n  calendar_summary: serviceName + ' - ' + customerName,\n  calendar_description: '🦷 ' + serviceName + '\\n👤 ' + customerName + '\\n📧 ' + customerEmail + (rawPhone ? '\\n📞 ' + rawPhone : '') + '\\n\\n⏰ Duration: ' + serviceDuration + ' min',\n  calendar_start: calendarStart,\n  calendar_end: calendarEnd,\n  booking_ref: bookingRef\n};\n\nreturn [{ json: result }];"
+            },
+            "name": "Extract Booking Data",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -128,
+                -240
+            ],
+            "id": "243b7fd1-a008-4096-b083-ff5f0b6e3072"
+        },
+        {
+            "parameters": {
+                "sendTo": "={{ $('Extract Booking Data').first().json.customer_email }}",
+                "subject": "={{ $('Extract Booking Data').first().json.email_subject }}",
+                "emailType": "html",
+                "message": "={{ $('Extract Booking Data').first().json.email_body }}",
+                "options": {}
+            },
+            "name": "Send Confirmation Email",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                320,
+                -240
+            ],
+            "id": "efb55d66-a660-4c65-a3f0-777a4918ef30",
+            "webhookId": "5db0aaec-24c1-405f-b15d-d9a2b0c3f67a",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "bsHsQyITlAn3DBQk",
+                    "name": "Gmail account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "calendar": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "primary"
+                },
+                "start": "={{ $('Extract Booking Data').first().json.calendar_start }}",
+                "end": "={{ $('Extract Booking Data').first().json.calendar_end }}",
+                "additionalFields": {
+                    "description": "={{ $('Extract Booking Data').first().json.calendar_description }}",
+                    "summary": "={{ $('Extract Booking Data').first().json.calendar_summary }}",
+                    "useDefaultReminders": true
+                }
+            },
+            "id": "e9b3bb9c-4a16-4cae-9e1e-0951432c8a4c",
+            "name": "Add to Calendar",
+            "type": "n8n-nodes-base.googleCalendar",
+            "typeVersion": 1.3,
+            "position": [
+                544,
+                -240
+            ],
+            "credentials": {
+                "googleCalendarOAuth2Api": {
+                    "id": "MC4P3mZxV4TOWrs8",
+                    "name": "Google Calendar account 2"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "tableId": "bookings",
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "customer_name",
+                            "fieldValue": "={{ $json.customer_name }}"
+                        },
+                        {
+                            "fieldId": "customer_email",
+                            "fieldValue": "={{ $json.customer_email }}"
+                        },
+                        {
+                            "fieldId": "customer_phone",
+                            "fieldValue": "={{ $json.customer_phone }}"
+                        },
+                        {
+                            "fieldId": "service_id",
+                            "fieldValue": "={{ $json.service_id }}"
+                        },
+                        {
+                            "fieldId": "service_name",
+                            "fieldValue": "={{ $json.service_name }}"
+                        },
+                        {
+                            "fieldId": "start_time",
+                            "fieldValue": "={{ $json.start_time }}"
+                        },
+                        {
+                            "fieldId": "end_time",
+                            "fieldValue": "={{ $json.end_time }}"
+                        },
+                        {
+                            "fieldId": "status",
+                            "fieldValue": "={{ $json.status }}"
+                        },
+                        {
+                            "fieldId": "amount_paid",
+                            "fieldValue": "={{ $json.amount_paid }}"
+                        },
+                        {
+                            "fieldId": "stripe_session_id",
+                            "fieldValue": "={{ $json.stripe_session_id }}"
+                        },
+                        {
+                            "fieldId": "payment_intent_id",
+                            "fieldValue": "={{ $json.payment_intent_id }}"
+                        },
+                        {
+                            "fieldId": "amount_cents",
+                            "fieldValue": "={{ $json.amount_cents }}"
+                        },
+                        {
+                            "fieldId": "currency",
+                            "fieldValue": "={{ $json.currency }}"
+                        },
+                        {
+                            "fieldId": "client_reference",
+                            "fieldValue": "={{ $json.client_reference }}"
+                        },
+                        {
+                            "fieldId": "cancellation_token",
+                            "fieldValue": "={{ $json.cancellation_token }}"
+                        },
+                        {
+                            "fieldId": "language",
+                            "fieldValue": "={{ $json.language }}"
+                        },
+                        {
+                            "fieldId": "clinic_id",
+                            "fieldValue": "={{ $json.clinic_id }}"
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                96,
+                -240
+            ],
+            "id": "9d96a148-429b-4892-9a19-fc089e02b14b",
+            "name": "Save to Supabase1",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "deleteRow",
+                "tableId": "bookings",
+                "filterType": "string",
+                "filterString": "={{ 'customer_email=eq.' + encodeURIComponent($('Extract Booking Data').first().json.customer_email) + '&start_time=eq.' + encodeURIComponent($('Extract Booking Data').first().json.start_time) + '&status=eq.pending' }}"
+            },
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                296,
+                -100
+            ],
+            "id": "delete-pending-duplicates",
+            "name": "Delete Pending Duplicates",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            },
+            "continueOnFail": true
+        }
+    ],
+    "connections": {
+        "Error Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Save to DLQ",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save to DLQ": {
+            "main": [
+                [
+                    {
+                        "node": "Send a text message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Booking Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Booking Data": {
+            "main": [
+                [
+                    {
+                        "node": "Save to Supabase1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Confirmation Email": {
+            "main": [
+                [
+                    {
+                        "node": "Add to Calendar",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save to Supabase1": {
+            "main": [
+                [
+                    {
+                        "node": "Send Confirmation Email",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Delete Pending Duplicates",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "edb1e678c20bb2dc211861028fa5a0da62086103c19f921423bcdc604ef1f332"
+    }
+}

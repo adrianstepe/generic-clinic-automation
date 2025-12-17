@@ -1,0 +1,294 @@
+// Supabase Edge Function: check-availability
+// Replaces n8n-4-check-availability.json for improved resilience
+//
+// Deploy: supabase functions deploy check-availability
+// Test: curl "https://<project>.supabase.co/functions/v1/check-availability?date=2025-12-07"
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// CORS headers for cross-origin requests from the widget
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Clinic configuration
+const CLINIC_START_HOUR = 9;
+const CLINIC_END_HOUR = 17;
+const SLOT_DURATION_MINUTES = 60;
+
+interface TimeSlot {
+    time: string;
+    available: boolean;
+}
+
+interface Booking {
+    start_time: string;
+    end_time: string;
+    status: string;
+    slot_lock_expires_at: string | null;
+}
+
+interface CalendarEvent {
+    start: { dateTime?: string; date?: string };
+    end: { dateTime?: string; date?: string };
+}
+
+// Check if two time ranges overlap
+function isOverlapping(
+    slotStart: number,
+    slotEnd: number,
+    busyStart: number,
+    busyEnd: number
+): boolean {
+    return slotStart < busyEnd && slotEnd > busyStart;
+}
+
+// Generate all slots for a day
+function generateSlots(date: string): { time: string; iso: string }[] {
+    const slots: { time: string; iso: string }[] = [];
+
+    for (let hour = CLINIC_START_HOUR; hour < CLINIC_END_HOUR; hour++) {
+        const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+        const slotIso = `${date}T${timeStr}:00`;
+        slots.push({ time: timeStr, iso: slotIso });
+    }
+
+    return slots;
+}
+
+// Fetch Google Calendar events via service account
+async function fetchGoogleCalendarEvents(date: string): Promise<CalendarEvent[]> {
+    const serviceAccountJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+    const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID') || 'primary';
+
+    if (!serviceAccountJson) {
+        console.warn('[GCal] No service account configured, skipping Google Calendar check');
+        return [];
+    }
+
+    try {
+        const serviceAccount = JSON.parse(serviceAccountJson);
+
+        // Generate JWT for Google API authentication
+        const jwt = await generateGoogleJWT(serviceAccount);
+
+        // Exchange JWT for access token
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                assertion: jwt,
+            }),
+        });
+
+        if (!tokenResponse.ok) {
+            const error = await tokenResponse.text();
+            console.error('[GCal] Token exchange failed:', error);
+            return [];
+        }
+
+        const { access_token } = await tokenResponse.json();
+
+        // Fetch calendar events for the date
+        const timeMin = `${date}T00:00:00Z`;
+        const timeMax = `${date}T23:59:59Z`;
+
+        const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+            `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true`;
+
+        const eventsResponse = await fetch(eventsUrl, {
+            headers: { Authorization: `Bearer ${access_token}` },
+        });
+
+        if (!eventsResponse.ok) {
+            const error = await eventsResponse.text();
+            console.error('[GCal] Events fetch failed:', error);
+            return [];
+        }
+
+        const data = await eventsResponse.json();
+        console.log(`[GCal] Found ${data.items?.length || 0} events for ${date}`);
+        return data.items || [];
+
+    } catch (error) {
+        console.error('[GCal] Error fetching calendar events:', error);
+        return [];
+    }
+}
+
+// Generate JWT for Google service account authentication
+async function generateGoogleJWT(serviceAccount: {
+    client_email: string;
+    private_key: string;
+}): Promise<string> {
+    const header = {
+        alg: 'RS256',
+        typ: 'JWT',
+    };
+
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+        iss: serviceAccount.client_email,
+        scope: 'https://www.googleapis.com/auth/calendar.readonly',
+        aud: 'https://oauth2.googleapis.com/token',
+        exp: now + 3600, // 1 hour
+        iat: now,
+    };
+
+    // Base64url encode
+    const encoder = new TextEncoder();
+    const base64url = (data: Uint8Array): string => {
+        return btoa(String.fromCharCode(...data))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+    };
+
+    const headerB64 = base64url(encoder.encode(JSON.stringify(header)));
+    const payloadB64 = base64url(encoder.encode(JSON.stringify(payload)));
+    const message = `${headerB64}.${payloadB64}`;
+
+    // Import private key and sign
+    const pemHeader = '-----BEGIN PRIVATE KEY-----';
+    const pemFooter = '-----END PRIVATE KEY-----';
+    const pemContents = serviceAccount.private_key
+        .replace(pemHeader, '')
+        .replace(pemFooter, '')
+        .replace(/\s/g, '');
+
+    const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+
+    const cryptoKey = await crypto.subtle.importKey(
+        'pkcs8',
+        binaryKey,
+        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+
+    const signature = await crypto.subtle.sign(
+        'RSASSA-PKCS1-v1_5',
+        cryptoKey,
+        encoder.encode(message)
+    );
+
+    const signatureB64 = base64url(new Uint8Array(signature));
+    return `${message}.${signatureB64}`;
+}
+
+Deno.serve(async (req) => {
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+    }
+
+    try {
+        // Parse date from query params
+        const url = new URL(req.url);
+        const date = url.searchParams.get('date');
+
+        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            return new Response(
+                JSON.stringify({ error: 'Invalid date format. Use YYYY-MM-DD' }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
+
+        console.log(`[Availability] Checking slots for ${date}`);
+
+        // Initialize Supabase client
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Fetch bookings from database
+        // Include status and slot_lock_expires_at to filter out active locks
+        const { data: dbBookings, error: dbError } = await supabase
+            .from('bookings')
+            .select('start_time, end_time, status, slot_lock_expires_at')
+            .gte('start_time', `${date}T00:00:00`)
+            .lte('start_time', `${date}T23:59:59`);
+
+        if (dbError) {
+            console.error('[Supabase] Query error:', dbError);
+            return new Response(
+                JSON.stringify({ error: 'Database query failed', details: dbError.message }),
+                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // Filter to only bookings that block the slot:
+        // 1. Confirmed/completed bookings always block
+        // 2. Pending bookings with active (non-expired) locks block
+        const now = new Date().getTime();
+        const blockedBookings = (dbBookings || []).filter(booking => {
+            // Confirmed/completed always block
+            if (booking.status === 'confirmed' || booking.status === 'completed') {
+                return true;
+            }
+            // Pending with active lock blocks
+            if (booking.status === 'pending' && booking.slot_lock_expires_at) {
+                const lockExpiry = new Date(booking.slot_lock_expires_at).getTime();
+                return lockExpiry > now;
+            }
+            // Cancelled or expired locks don't block
+            return false;
+        });
+
+        console.log(`[Supabase] Found ${dbBookings?.length || 0} bookings, ${blockedBookings.length} blocking for ${date}`);
+
+        // Fetch Google Calendar events
+        const gCalEvents = await fetchGoogleCalendarEvents(date);
+
+        // Generate all slots
+        const allSlots = generateSlots(date);
+
+        // Filter availability
+        const availableSlots: TimeSlot[] = allSlots.map((slot) => {
+            const slotStart = new Date(slot.iso).getTime();
+            const slotEnd = slotStart + SLOT_DURATION_MINUTES * 60 * 1000;
+
+            // Check against database bookings (only those that actually block)
+            for (const booking of blockedBookings) {
+                if (booking.start_time && booking.end_time) {
+                    const busyStart = new Date(booking.start_time).getTime();
+                    const busyEnd = new Date(booking.end_time).getTime();
+                    if (isOverlapping(slotStart, slotEnd, busyStart, busyEnd)) {
+                        return { time: slot.time, available: false };
+                    }
+                }
+            }
+
+            // Check against Google Calendar events
+            for (const event of gCalEvents) {
+                const eventStart = event.start?.dateTime || event.start?.date;
+                const eventEnd = event.end?.dateTime || event.end?.date;
+                if (eventStart && eventEnd) {
+                    const busyStart = new Date(eventStart).getTime();
+                    const busyEnd = new Date(eventEnd).getTime();
+                    if (isOverlapping(slotStart, slotEnd, busyStart, busyEnd)) {
+                        return { time: slot.time, available: false };
+                    }
+                }
+            }
+
+            return { time: slot.time, available: true };
+        });
+
+        console.log(`[Availability] Returning ${availableSlots.filter(s => s.available).length}/${availableSlots.length} available slots`);
+
+        return new Response(
+            JSON.stringify({ slots: availableSlots }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+    } catch (error) {
+        console.error('[Availability] Unexpected error:', error);
+        return new Response(
+            JSON.stringify({ error: 'Internal server error', details: String(error) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+    }
+});

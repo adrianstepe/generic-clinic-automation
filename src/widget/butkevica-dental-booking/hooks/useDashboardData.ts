@@ -1,0 +1,237 @@
+import { useState, useEffect, useMemo } from 'react';
+import { supabase } from '../supabaseClient';
+import { startOfDay, endOfDay, isSameDay, parseISO } from 'date-fns';
+
+export interface DashboardBooking {
+    id: string;
+    created_at: string;
+    customer_name: string;
+    customer_email: string;
+    customer_phone?: string;
+    start_time: string;
+    end_time?: string;
+    status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+    doctor_id?: string;
+    service_id?: string;
+    doctor_name?: string;
+    service_name?: string;
+    notes?: string;
+    doctor?: {
+        full_name: string;
+    };
+    services?: {
+        name: any; // JSONB
+        price_cents: number;
+        duration_minutes?: number;
+    };
+    // Keep these for backward compatibility if needed, or map them from 'services'
+    service?: {
+        name: any;
+        price: number;
+        durationMinutes?: number;
+    };
+}
+
+export interface DashboardStats {
+    appointmentsToday: number;
+    patientsWaiting: number;
+    pendingRequests: number;
+    revenue: number;
+}
+
+interface UseDashboardDataProps {
+    dateRange?: { start: Date; end: Date };
+    doctorId?: string | 'all';
+}
+
+export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps) => {
+    const [bookings, setBookings] = useState<DashboardBooking[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchBookings = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Get current user
+            const { data: { user } } = await supabase.auth.getUser();
+
+            console.log('[Dashboard] Fetching bookings...');
+            console.log('[Dashboard] Current User:', user?.id, user?.email);
+
+            if (!user) {
+                console.log('[Dashboard] No authenticated user found');
+                setError('Please log in to view bookings');
+                setLoading(false);
+                return;
+            }
+
+            // Check user's role
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('role, full_name, clinic_id')
+                .eq('id', user.id)
+                .single();
+
+            console.log('[Dashboard] User Profile:', profile, 'Profile Error:', profileError);
+
+            let query = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    services:service_id (
+                        name,
+                        price_cents,
+                        duration_minutes
+                    ),
+                    doctor:doctor_id (
+                        full_name
+                    )
+                `)
+                .order('start_time', { ascending: true });
+
+            // SaaS: Filter by clinic_id
+            if (profile?.clinic_id) {
+                query = query.eq('clinic_id', profile.clinic_id);
+            } else {
+                console.warn('[Dashboard] No clinic_id found in profile, query might return empty or unauthorized data');
+            }
+
+            // Filter by the selected doctor if specified
+            if (doctorId && doctorId !== 'all') {
+                query = query.eq('doctor_id', doctorId);
+            }
+
+            if (dateRange) {
+                query = query.gte('start_time', dateRange.start.toISOString())
+                    .lte('start_time', dateRange.end.toISOString());
+            }
+
+            const { data, error } = await query;
+
+            console.log('[Dashboard] Query Result - Data count:', data?.length || 0);
+            console.log('[Dashboard] Query Result - Error:', error);
+            console.log('[Dashboard] Raw Data:', JSON.stringify(data, null, 2));
+
+            if (error) {
+                console.error('[Dashboard] Query Error:', error.message, error.hint, error.details);
+                throw error;
+            }
+
+            if (!data || data.length === 0) {
+                console.log('[Dashboard] No bookings found in database');
+                setBookings([]);
+                setLoading(false);
+                return;
+            }
+
+            // Helper to parse localized names
+            const getLocalizedName = (nameData: any, lang: string = 'EN'): string => {
+                if (!nameData) return 'Unknown Service';
+
+                try {
+                    // If it's already a string
+                    if (typeof nameData === 'string') {
+                        // Check if it looks like a JSON string
+                        if (nameData.trim().startsWith('{')) {
+                            const parsed = JSON.parse(nameData);
+                            return parsed[lang] || parsed['EN'] || Object.values(parsed)[0] as string || nameData;
+                        }
+                        return nameData;
+                    }
+
+                    // If it's an object
+                    if (typeof nameData === 'object') {
+                        return nameData[lang] || nameData['EN'] || Object.values(nameData)[0] as string || 'Unknown Service';
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse service name:', nameData);
+                    return String(nameData);
+                }
+
+                return 'Unknown Service';
+            };
+
+            // Map data to match the interface expected by components
+            // REMOVED: Aggressive test data filtering - show ALL bookings
+            const mappedData = (data as any[]).map(b => {
+                // Handle the joined 'services' object
+                const serviceData = Array.isArray(b.services) ? b.services[0] : b.services;
+                // Handle the joined 'doctor' object
+                const doctorData = Array.isArray(b.doctor) ? b.doctor[0] : b.doctor;
+
+                const serviceName = b.service_name || getLocalizedName(serviceData?.name);
+
+                return {
+                    ...b,
+                    service_name: serviceName,
+                    doctor_name: doctorData?.full_name || 'Nav norādīts',
+                    service: serviceData ? {
+                        name: serviceName,
+                        price: serviceData.price_cents ? serviceData.price_cents / 100 : 0,
+                        durationMinutes: serviceData.duration_minutes || 30
+                    } : undefined,
+                    doctor: doctorData ? {
+                        full_name: doctorData.full_name
+                    } : undefined
+                };
+            });
+
+            console.log('[Dashboard] Mapped Bookings:', mappedData.length, 'bookings');
+            setBookings(mappedData as DashboardBooking[]);
+        } catch (err: any) {
+            console.error('[Dashboard] Error fetching dashboard data:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchBookings();
+
+        // Real-time subscription
+        const channel = supabase
+            .channel('public:bookings')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'bookings' },
+                (payload) => {
+                    console.log('Real-time update:', payload);
+                    fetchBookings();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [doctorId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()]);
+
+    const stats = useMemo(() => {
+        const today = new Date();
+        const todayBookings = bookings.filter(b => isSameDay(parseISO(b.start_time), today));
+
+        const appointmentsToday = todayBookings.filter(b => b.status !== 'cancelled').length;
+
+        const patientsWaiting = todayBookings.filter(b =>
+            b.status === 'confirmed' && new Date(b.start_time) > new Date()
+        ).length;
+
+        const pendingRequests = bookings.filter(b => b.status === 'pending').length;
+
+        const revenue = bookings
+            .filter(b => b.status === 'completed' || b.status === 'confirmed')
+            .reduce((acc, curr) => acc + (curr.service?.price || 0), 0);
+
+        return {
+            appointmentsToday,
+            patientsWaiting,
+            pendingRequests,
+            revenue
+        };
+    }, [bookings]);
+
+    return { bookings, loading, error, stats, refresh: fetchBookings };
+};
