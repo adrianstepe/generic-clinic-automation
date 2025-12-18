@@ -53,7 +53,7 @@ export async function onRequestPost(context) {
         if (body.customer) {
             formData.append('metadata[customer_name]', body.customer.name);
             formData.append('metadata[customer_email]', body.customer.email);
-            if (body.customer.phone && body.customer.phone.length > 5) {
+            if (body.customer.phone) {
                 formData.append('metadata[customer_phone]', body.customer.phone);
             }
             formData.append('customer_email', body.customer.email);
