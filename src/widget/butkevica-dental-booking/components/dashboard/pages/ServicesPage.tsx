@@ -1,27 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/supabaseClient';
 import { useUser } from '@/contexts/UserContext';
-import { Plus, Edit2, Trash2, X, Check } from 'lucide-react';
-import { Service, Language } from '@/types';
+import { Plus, Pencil, Trash2, X, Save, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
 
-// Extended Service type for local usage if needed, or rely on imported type
-// But types.ts service uses Record<Language, string> which is good.
+interface ServiceItem {
+    id: string;
+    name: { LV: string; EN: string; RU: string };
+    price_cents: number;
+    duration_minutes: number;
+    category: string;
+    is_active: boolean;
+}
 
 const ServicesPage: React.FC = () => {
     const { profile } = useUser();
-    const [services, setServices] = useState<Service[]>([]);
+    const [services, setServices] = useState<ServiceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingService, setEditingService] = useState<Service | null>(null);
+    const [editingService, setEditingService] = useState<ServiceItem | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
-        name_en: '',
-        name_lv: '',
-        name_ru: '',
-        price: '',
-        duration: '30',
-        category: 'treatment'
+        nameLV: '', nameEN: '', nameRU: '',
+        category: '', price: '', duration: '30'
     });
 
     useEffect(() => {
@@ -31,278 +32,285 @@ const ServicesPage: React.FC = () => {
     }, [profile]);
 
     const fetchServices = async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('services')
-                .select('*')
-                .eq('clinic_id', profile?.clinic_id)
-                .order('category');
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('services')
+            .select('*')
+            .eq('clinic_id', profile?.clinic_id)
+            .order('category', { ascending: true });
 
-            if (error) throw error;
-
-            // Transform DB format (snake_case, lowercase keys) to frontend format (camelCase, uppercase keys)
-            const transformedData = (data || []).map((row: any) => ({
+        if (!error && data) {
+            // Transform DB format to match our interface
+            const transformed = data.map((row: any) => ({
                 id: row.id,
                 name: {
-                    EN: row.name?.en || row.name?.EN || '',
                     LV: row.name?.lv || row.name?.LV || '',
+                    EN: row.name?.en || row.name?.EN || '',
                     RU: row.name?.ru || row.name?.RU || ''
                 },
-                description: {
-                    EN: row.description?.en || row.description?.EN || '',
-                    LV: row.description?.lv || row.description?.LV || '',
-                    RU: row.description?.ru || row.description?.RU || ''
-                },
-                price: row.price_cents || row.price || 0, // Keep in cents for display
-                durationMinutes: row.duration_minutes || row.durationMinutes || 0,
-                icon: row.icon || '',
-                category: row.category || 'treatment'
+                price_cents: row.price_cents || row.price || 0,
+                duration_minutes: row.duration_minutes || 0,
+                category: row.category || 'Citi',
+                is_active: row.is_active !== false
             }));
-            setServices(transformedData);
-        } catch (error) {
-            console.error('Error fetching services:', error);
-        } finally {
-            setLoading(false);
+            setServices(transformed);
         }
+        setLoading(false);
     };
 
-
-    const handleEdit = (service: Service) => {
-        setEditingService(service);
-        setFormData({
-            name_en: service.name.EN || '',
-            name_lv: service.name.LV || '',
-            name_ru: service.name.RU || '',
-            price: (service.price / 100).toString(), // Convert cents to eur
-            duration: service.durationMinutes.toString(),
-            category: service.category
-        });
-        setIsModalOpen(true);
-    };
-
-    const handleCreate = () => {
-        setEditingService(null);
-        setFormData({
-            name_en: '',
-            name_lv: '',
-            name_ru: '',
-            price: '',
-            duration: '30',
-            category: 'treatment'
-        });
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this service?')) return;
-
-        const { error } = await supabase
-            .from('services')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            alert('Error deleting service');
+    const handleOpenModal = (service?: ServiceItem) => {
+        if (service) {
+            setEditingService(service);
+            setFormData({
+                nameLV: service.name.LV || '',
+                nameEN: service.name.EN || '',
+                nameRU: service.name.RU || '',
+                category: service.category || 'Vispārēji',
+                price: (service.price_cents / 100).toString(),
+                duration: service.duration_minutes.toString()
+            });
         } else {
-            fetchServices();
+            setEditingService(null);
+            setFormData({ nameLV: '', nameEN: '', nameRU: '', category: '', price: '', duration: '30' });
         }
+        setIsModalOpen(true);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!profile?.clinic_id) return;
+    const handleSave = async () => {
+        if (!formData.nameLV || !formData.price) {
+            alert('Lūdzu aizpildiet obligātos laukus!');
+            return;
+        }
 
         const payload = {
-            clinic_id: profile.clinic_id,
-            name: {
-                EN: formData.name_en,
-                LV: formData.name_lv,
-                RU: formData.name_ru
-            },
-            description: { EN: '', LV: '', RU: '' }, // Default empty for now
+            clinic_id: profile?.clinic_id,
+            name: { lv: formData.nameLV, en: formData.nameEN, ru: formData.nameRU },
+            category: formData.category || 'Vispārēji',
             price_cents: Math.round(parseFloat(formData.price) * 100),
             duration_minutes: parseInt(formData.duration),
-            category: formData.category,
             is_active: true
         };
 
         let error;
         if (editingService) {
-            const { error: err } = await supabase
+            const { error: updateError } = await supabase
                 .from('services')
                 .update(payload)
                 .eq('id', editingService.id);
-            error = err;
+            error = updateError;
         } else {
-            const { error: err } = await supabase
+            const { error: insertError } = await supabase
                 .from('services')
-                .insert(payload);
-            error = err;
+                .insert([payload]);
+            error = insertError;
         }
 
         if (error) {
-            console.error('Error saving service:', error);
-            alert('Failed to save service');
+            alert('Kļūda saglabājot: ' + error.message);
         } else {
             setIsModalOpen(false);
             fetchServices();
         }
     };
 
-    if (loading) return <div className="p-8">Loading services...</div>;
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Vai tiešām vēlaties dzēst šo pakalpojumu?')) return;
+
+        const { error } = await supabase.from('services').delete().eq('id', id);
+        if (error) alert('Kļūda dzēšot: ' + error.message);
+        else fetchServices();
+    };
+
+    const handleToggleActive = async (id: string, currentStatus: boolean) => {
+        const { error } = await supabase
+            .from('services')
+            .update({ is_active: !currentStatus })
+            .eq('id', id);
+
+        if (error) {
+            alert('Kļūda mainot statusu: ' + error.message);
+        } else {
+            fetchServices();
+        }
+    };
+
+    // Get unique categories for grouping
+    const categories = Array.from(new Set(services.map(s => s.category || 'Citi')));
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Services</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Manage your clinic's services and pricing</p>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Pakalpojumi un Kategorijas</h1>
+                    <p className="text-slate-500 dark:text-slate-400">Pārvaldiet klīnikas piedāvājumu un cenas</p>
                 </div>
                 <button
-                    onClick={handleCreate}
-                    className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    onClick={() => handleOpenModal()}
+                    className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
                 >
                     <Plus size={20} />
-                    Add Service
+                    Pievienot jaunu
                 </button>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 dark:bg-slate-700/50">
-                        <tr>
-                            <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Service Name</th>
-                            <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Category</th>
-                            <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Duration</th>
-                            <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Price</th>
-                            <th className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                        {services.map((service) => (
-                            <tr key={service.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                <td className="p-4">
-                                    <div className="font-medium text-slate-900 dark:text-white">{service.name.LV || service.name.EN}</div>
-                                    <div className="text-xs text-slate-400">{service.name.EN}</div>
-                                </td>
-                                <td className="p-4">
-                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                        {service.category}
-                                    </span>
-                                </td>
-                                <td className="p-4 text-slate-600 dark:text-slate-300">
-                                    {service.durationMinutes} min
-                                </td>
-                                <td className="p-4 font-medium text-slate-900 dark:text-white">
-                                    €{(service.price / 100).toFixed(2)}
-                                </td>
-                                <td className="p-4 text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <button
-                                            onClick={() => handleEdit(service)}
-                                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-lg transition-colors"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(service.id)}
-                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            {loading ? (
+                <div className="flex justify-center py-20"><Loader2 className="animate-spin text-teal-600" size={32} /></div>
+            ) : services.length === 0 ? (
+                <div className="text-center py-20 text-slate-500 dark:text-slate-400">
+                    Nav atrasti pakalpojumi. Pievienojiet pirmo!
+                </div>
+            ) : (
+                <div className="space-y-8">
+                    {categories.map(cat => (
+                        <div key={cat} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+                            <div className="bg-slate-50 dark:bg-slate-700/50 px-6 py-3 border-b border-gray-200 dark:border-slate-600 font-semibold text-slate-700 dark:text-slate-300">
+                                {cat}
+                            </div>
+                            <table className="w-full text-left">
+                                <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-700/30">
+                                    <tr>
+                                        <th className="px-6 py-3">Nosaukums (LV)</th>
+                                        <th className="px-6 py-3">Ilgums</th>
+                                        <th className="px-6 py-3">Cena</th>
+                                        <th className="px-6 py-3">Status</th>
+                                        <th className="px-6 py-3 text-right">Darbības</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                                    {services.filter(s => (s.category || 'Citi') === cat).map(service => (
+                                        <tr key={service.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-slate-900 dark:text-white">{service.name.LV}</div>
+                                                {service.name.EN && <div className="text-xs text-slate-400">{service.name.EN}</div>}
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{service.duration_minutes} min</td>
+                                            <td className="px-6 py-4 text-teal-600 dark:text-teal-400 font-bold">€{(service.price_cents / 100).toFixed(2)}</td>
+                                            <td className="px-6 py-4">
+                                                <button
+                                                    onClick={() => handleToggleActive(service.id, service.is_active)}
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${service.is_active
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                                                        }`}
+                                                    title={service.is_active ? 'Noklikšķiniet, lai deaktivizētu' : 'Noklikšķiniet, lai aktivizētu'}
+                                                >
+                                                    {service.is_active ? (
+                                                        <><ToggleRight size={16} /> Aktīvs</>
+                                                    ) : (
+                                                        <><ToggleLeft size={16} /> Neaktīvs</>
+                                                    )}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4 text-right space-x-2">
+                                                <button onClick={() => handleOpenModal(service)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1">
+                                                    <Pencil size={18} />
+                                                </button>
+                                                <button onClick={() => handleDelete(service.id)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold dark:text-white">{editingService ? 'Edit Service' : 'New Service'}</h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+                                {editingService ? 'Rediģēt pakalpojumu' : 'Jauns pakalpojums'}
+                            </h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                 <X size={24} />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Name (English)</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Kategorija</label>
                                 <input
                                     type="text"
-                                    required
-                                    className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                    value={formData.name_en}
-                                    onChange={e => setFormData({ ...formData, name_en: e.target.value })}
+                                    value={formData.category}
+                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                    className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white focus:ring-teal-500 focus:border-teal-500"
+                                    placeholder="piem. Higiēna"
                                 />
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ierakstiet jaunu vai esošu kategoriju</p>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Name (Latvian)</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                    value={formData.name_lv}
-                                    onChange={e => setFormData({ ...formData, name_lv: e.target.value })}
-                                />
-                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Price (€)</label>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cena (€)</label>
                                     <input
                                         type="number"
                                         step="0.01"
-                                        required
-                                        className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                         value={formData.price}
                                         onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                        className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Duration (min)</label>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Ilgums (min)</label>
                                     <input
                                         type="number"
-                                        required
-                                        className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                         value={formData.duration}
                                         onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                                        className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white"
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                                <select
-                                    className="w-full p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                    value={formData.category}
-                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                >
-                                    <option value="preventive">Preventive</option>
-                                    <option value="treatment">Treatment</option>
-                                    <option value="surgery">Surgery</option>
-                                    <option value="children">Children</option>
-                                    <option value="prosthetics">Prosthetics</option>
-                                </select>
+
+                            <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-slate-700">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nosaukums (Latviski) *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.nameLV}
+                                        onChange={e => setFormData({ ...formData, nameLV: e.target.value })}
+                                        className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nosaukums (Angliski)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nameEN}
+                                        onChange={e => setFormData({ ...formData, nameEN: e.target.value })}
+                                        className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nosaukums (Krieviski)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nameRU}
+                                        onChange={e => setFormData({ ...formData, nameRU: e.target.value })}
+                                        className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-white"
+                                    />
+                                </div>
                             </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
-                                >
-                                    Save Service
-                                </button>
-                            </div>
-                        </form>
+                        </div>
+                        <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 text-slate-600 dark:text-slate-300 font-medium hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                            >
+                                Atcelt
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="px-4 py-2 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+                            >
+                                <Save size={18} />
+                                Saglabāt
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -11,3 +11,4 @@ Check all email messages
 - [ ] **Twilio Phone Number** - Replace placeholder `+1234567890` in workflows with client's actual Twilio number (or disable SMS if not needed)
 - [ ] **Gmail Account** - Verify Gmail OAuth credentials work for client's sending email address
 - [ ] **Google Calendar** - Verify calendar integration uses correct clinic calendar
+- [ ] **Phone Validation** - Investigate why phone numbers aren't saving to Supabase (check if empty values are being sent, consider enforcing required phone input)

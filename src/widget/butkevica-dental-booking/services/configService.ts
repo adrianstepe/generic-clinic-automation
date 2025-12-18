@@ -132,7 +132,8 @@ export async function fetchServices(clinicId: string): Promise<Service[]> {
     const { data, error } = await supabase
       .from('services')
       .select('*')
-      .eq('clinic_id', clinicId);
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true);
 
     if (error) {
       console.warn('[ConfigService] Supabase error services:', error);

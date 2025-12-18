@@ -1,12 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, Users, Briefcase, Settings } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Settings } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
     const navItems = [
         { icon: Home, label: 'Pārskats', path: '/dashboard', end: true },
         { icon: Calendar, label: 'Kalendārs', path: '/dashboard/calendar' },
-        { icon: Briefcase, label: 'Pakalpojumi', path: '/dashboard/services' },
+        { icon: Stethoscope, label: 'Pakalpojumi', path: '/dashboard/services' },
         { icon: Users, label: 'Speciālisti', path: '/dashboard/specialists' },
     ];
 
