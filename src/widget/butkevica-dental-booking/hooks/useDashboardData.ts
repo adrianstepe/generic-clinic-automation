@@ -67,10 +67,10 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
                 return;
             }
 
-            // Check user's role
+            // Check user's role and specialist_id
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('role, full_name, clinic_id')
+                .select('role, full_name, clinic_id, specialist_id')
                 .eq('id', user.id)
                 .single();
 
@@ -85,8 +85,9 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
                         price_cents,
                         duration_minutes
                     ),
-                    doctor:doctor_id (
-                        full_name
+                    specialist:specialist_id (
+                        name,
+                        role
                     )
                 `)
                 .order('start_time', { ascending: true });
@@ -98,9 +99,15 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
                 console.warn('[Dashboard] No clinic_id found in profile, query might return empty or unauthorized data');
             }
 
-            // Filter by the selected doctor if specified
-            if (doctorId && doctorId !== 'all') {
-                query = query.eq('doctor_id', doctorId);
+            // ROLE-BASED FILTERING: Doctors see only their appointments
+            if (profile?.role === 'doctor' && profile?.specialist_id) {
+                query = query.eq('specialist_id', profile.specialist_id);
+                console.log('[Dashboard] Filtering by doctor specialist_id:', profile.specialist_id);
+            }
+
+            // Filter by the selected doctor if specified (for admin dropdown filter)
+            if (doctorId && doctorId !== 'all' && profile?.role !== 'doctor') {
+                query = query.eq('specialist_id', doctorId);
             }
 
             if (dateRange) {
@@ -158,22 +165,23 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
             const mappedData = (data as any[]).map(b => {
                 // Handle the joined 'services' object
                 const serviceData = Array.isArray(b.services) ? b.services[0] : b.services;
-                // Handle the joined 'doctor' object
-                const doctorData = Array.isArray(b.doctor) ? b.doctor[0] : b.doctor;
+                // Handle the joined 'specialist' object (from specialists table)
+                const specialistData = Array.isArray(b.specialist) ? b.specialist[0] : b.specialist;
 
                 const serviceName = b.service_name || getLocalizedName(serviceData?.name);
+                const doctorName = specialistData?.name || b.doctor_name || 'Nav norādīts';
 
                 return {
                     ...b,
                     service_name: serviceName,
-                    doctor_name: doctorData?.full_name || 'Nav norādīts',
+                    doctor_name: doctorName,
                     service: serviceData ? {
                         name: serviceName,
                         price: serviceData.price_cents ? serviceData.price_cents / 100 : 0,
                         durationMinutes: serviceData.duration_minutes || 30
                     } : undefined,
-                    doctor: doctorData ? {
-                        full_name: doctorData.full_name
+                    doctor: specialistData ? {
+                        full_name: specialistData.name
                     } : undefined
                 };
             });

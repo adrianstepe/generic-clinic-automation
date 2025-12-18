@@ -62,4 +62,5 @@ export interface UserProfile {
   avatar_url?: string;
   color_code?: string;
   clinic_id?: string; // SaaS: Clinic ID for multi-tenancy
+  specialist_id?: string; // Links to specialists table for doctors
 }
