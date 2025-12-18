@@ -135,7 +135,10 @@ export async function onRequestPost(context) {
         });
 
     } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
+        return new Response(JSON.stringify({
+            error: err.message,
+            stack: err.stack
+        }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });

@@ -265,6 +265,7 @@
         },
         {
             "parameters": {
+                "resource": "row",
                 "operation": "deleteRow",
                 "tableId": "bookings",
                 "filterType": "string",
