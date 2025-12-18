@@ -38,6 +38,7 @@ Central record of all appointments with full payment tracking.
 | `cancellation_token` | varchar | ❌ | Secure token for self-service cancellation |
 | `cancelled_at` | timestamptz | ❌ | When booking was cancelled |
 | `refund_status` | varchar | ❌ | processed/not_eligible/failed |
+| `specialist_id` | text | ❌ | Assigned specialist ID (result of selection or auto-assignment) |
 | `created_at` | timestamptz | Auto | |
 | `updated_at` | timestamptz | Auto | |
 | `expires_at` | timestamptz | ❌ | For pending bookings |
@@ -92,21 +93,20 @@ Replaces hardcoded SERVICES array in `constants.ts`. Allows service changes with
 | `display_order` | integer | ❌ | For ordering in UI |
 | `is_active` | boolean | ❌ | Default: true |
 
-#### `clinic_specialists` (Dynamic Configuration)
+#### `specialists` (Dynamic Configuration)
 Replaces hardcoded SPECIALISTS array in `constants.ts`.
 
 | Column | Type | Required | Notes |
 |--------|------|----------|-------|
 | `id` | text | PK | Specialist identifier (d1, d2, etc.) |
-| `business_id` | text | ✅ | Default: BUTKEVICA_DENTAL |
+| `clinic_id` | text | ✅ | Links to `clinics.id` |
 | `name` | text | ✅ | Full name |
-| `role_en` | text | ❌ | English role title |
-| `role_lv` | text | ❌ | Latvian role title |
-| `role_ru` | text | ❌ | Russian role title |
+| `role` | jsonb | ❌ | Localized role (en, lv, ru) |
 | `photo_url` | text | ❌ | Avatar URL |
-| `specialty_ids` | text[] | ❌ | Array of service IDs they can perform |
-| `display_order` | integer | ❌ | For ordering in UI |
+| `specialties` | text[] | ❌ | **CRITICAL:** Array of service IDs they are qualified for. Used by auto-assignment logic. |
 | `is_active` | boolean | ❌ | Default: true |
+| `display_order` | integer | ❌ | For ordering in UI |
+| `created_at` | timestamptz | Auto | |
 
 ### Automated Logic & Security
 *   **RLS Policies:**
@@ -155,13 +155,19 @@ Replaces hardcoded SPECIALISTS array in `constants.ts`.
 *   **Integration:** Uses **native Supabase node** (not HTTP requests) for cleaner integration.
 *   **Logic Path:**
     1.  **Filter:** Ensures event is `checkout.session.completed`.
-    2.  **Extract:** Code node parses metadata (Customer Name, Email, Phone, Service, Date/Time).
-    3.  **Language Logic:** Priority 1: `metadata.language` from widget. Priority 2: Phone-based fallback.
-    4.  **Database:** Native Supabase node inserts record into `bookings` table. **(Single source of truth for writes)**
-    5.  **Email:** Sends confirmation email via Gmail (localized). **(PII allowed - sent to patient)**
-    6.  **Calendar:** Adds event to Google Calendar. **(GDPR Pseudonymized - no PII exposed)**
-*   **Fields Saved:** `customer_name`, `customer_email`, `customer_phone`, `service_id`, `service_name`, `start_time`, `end_time`, `status`, `amount_paid`, `language`, `cancellation_token`, `payment_intent_id`, `stripe_session_id`
-*   **Outcome:** Booking saved in DB, Client notified, Calendar updated.
+    2.  **Extract:** Code node parses metadata (Customer Name, Email, Phone, Service, Date/Time). Extract `doctor_id` (if selected) and `service_id`.
+    3.  **Auto-Assignment Logic:**
+        -   IF `doctor_id` is null (Patient chose "Any Available Specialist"):
+            -   **Fetch Qualifiers:** Query `specialists` table for doctors whose `specialties` array contains the current `service_id`.
+            -   **Random Selection:** If multiple qualified doctors found, randomly select one for fair distribution.
+            -   **Assign:** Update booking data with selected `specialist_id` and `specialist_name`.
+        -   IF `doctor_id` is provided: Use the pre-selected specialist.
+    4.  **Language Logic:** Priority 1: `metadata.language` from widget. Priority 2: Phone-based fallback.
+    5.  **Database:** Native Supabase node inserts record into `bookings` table. **(Single source of truth for writes)**
+    6.  **Email:** Sends confirmation email via Gmail (localized). **Now includes assigned specialist name.**
+    7.  **Calendar:** Adds event to Google Calendar. Includes specialist name in description for staff internal view.
+*   **Fields Saved:** `customer_name`, `customer_email`, `customer_phone`, `service_id`, `service_name`, `start_time`, `end_time`, `status`, `amount_paid`, `language`, `cancellation_token`, `payment_intent_id`, `stripe_session_id`, `specialist_id`
+*   **Outcome:** Booking saved in DB with auto-assigned doctor, Client notified with doctor name, Calendar updated.
 *   **GDPR Compliance:** Calendar events show only `Vizīte BK-XXXXX` with link to secure dashboard. No patient names, emails, or phone numbers in calendar.
 *   **Error Handling:** All nodes use `onError: stopWorkflow` to trigger Error Trigger node.
 
@@ -685,3 +691,22 @@ butkeviča-dental-booking/
 │   └── webhook/
 └── [source files]                # App.tsx, index.tsx, etc.
 ```
+### 6.14 Automatic Doctor Assignment (Added 2025-12-18)
+
+**Problem Solved:** Patients who select "Any Available Specialist" remained unassigned in the database, requiring manual intervention from clinic staff.
+
+**Solution:** Server-side automated assignment based on service qualification.
+
+**The Logic:**
+1.  **Qualification Check:** The system uses the `specialties` column (text array) in the `specialists` table to filter doctors capable of performing the booked service.
+2.  **Clinic Isolation:** Only specialists belonging to the specific `clinic_id` of the booking are considered.
+3.  **Fair Distribution (Randomization):** If multiple specialists are qualified for a service, the system selects one at random. This ensures a fair workload distribution among doctors.
+4.  **Metadata Enhancement:**
+    -   Widget passes `service_id` and `duration` (min) to Stripe metadata.
+    -   n8n extracts these to perform the lookup.
+5.  **Graceful Fallback:** If no specialists are found matching the service, the booking proceeds without a specialist assigned (staying null), and an alert is logged for manual review.
+
+**Technical Implementation:**
+-   **n8n Node:** `Fetch Qualified Specialists` (Supabase node using PostgREST array containment filter `cs.{service_id}`).
+-   **n8n Code Node:** `Auto-Assign Specialist` (Random selection logic + consolidated email generation).
+-   **Database:** `specialist_id` column added to `bookings` for persistent tracking.
