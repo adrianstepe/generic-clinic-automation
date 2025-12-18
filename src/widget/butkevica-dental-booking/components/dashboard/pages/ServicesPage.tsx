@@ -12,6 +12,22 @@ interface ServiceItem {
     is_active: boolean;
 }
 
+// Category translations to Latvian for display
+const CATEGORY_LABELS: Record<string, string> = {
+    'preventive': 'Profilakse',
+    'children': 'Bērniem',
+    'treatment': 'Ārstēšana',
+    'surgery': 'Ķirurģija',
+    'prosthetics': 'Protezēšana',
+    'Vispārēji': 'Vispārēji',
+    'Higiēna': 'Higiēna',
+};
+
+// Get Latvian label for category (fallback to original if not found)
+const getCategoryLabel = (category: string): string => {
+    return CATEGORY_LABELS[category.toLowerCase()] || CATEGORY_LABELS[category] || category;
+};
+
 const ServicesPage: React.FC = () => {
     const { profile } = useUser();
     const [services, setServices] = useState<ServiceItem[]>([]);
@@ -99,9 +115,11 @@ const ServicesPage: React.FC = () => {
                 .eq('id', editingService.id);
             error = updateError;
         } else {
+            // Generate unique ID for new service
+            const newId = `s_${crypto.randomUUID().slice(0, 8)}`;
             const { error: insertError } = await supabase
                 .from('services')
-                .insert([payload]);
+                .insert([{ id: newId, ...payload }]);
             error = insertError;
         }
 
@@ -135,7 +153,7 @@ const ServicesPage: React.FC = () => {
     };
 
     // Get unique categories for grouping
-    const categories = Array.from(new Set(services.map(s => s.category || 'Citi')));
+    const categories: string[] = Array.from(new Set(services.map(s => s.category || 'Citi')));
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
@@ -164,7 +182,7 @@ const ServicesPage: React.FC = () => {
                     {categories.map(cat => (
                         <div key={cat} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
                             <div className="bg-slate-50 dark:bg-slate-700/50 px-6 py-3 border-b border-gray-200 dark:border-slate-600 font-semibold text-slate-700 dark:text-slate-300">
-                                {cat}
+                                {getCategoryLabel(cat)}
                             </div>
                             <table className="w-full text-left">
                                 <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-700/30">
@@ -189,8 +207,8 @@ const ServicesPage: React.FC = () => {
                                                 <button
                                                     onClick={() => handleToggleActive(service.id, service.is_active)}
                                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${service.is_active
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                        : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
                                                         }`}
                                                     title={service.is_active ? 'Noklikšķiniet, lai deaktivizētu' : 'Noklikšķiniet, lai aktivizētu'}
                                                 >
