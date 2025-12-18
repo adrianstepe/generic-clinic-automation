@@ -196,6 +196,7 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
             // OPTIONAL: Pass the translated service name for the Calendar Event Title
             serviceName: service.name[booking.language] || service.name[Language.EN],
             language: booking.language,
+            duration: service.durationMinutes || 60,
             doctor_id: booking.selectedSpecialist?.id || null,
             doctor_name: booking.selectedSpecialist?.name || null,
             // SLOT LOCK: Pass pending booking ID so n8n can promote to confirmed

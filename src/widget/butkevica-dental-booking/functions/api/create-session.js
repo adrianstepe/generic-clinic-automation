@@ -38,6 +38,7 @@ export async function onRequestPost(context) {
             formData.append('metadata[service_id]', body.booking.serviceId);
             formData.append('metadata[serviceName]', body.booking.serviceName || 'Dental Service');
             formData.append('metadata[language]', body.booking.language || 'en');
+            if (body.booking.duration) formData.append('metadata[duration]', body.booking.duration.toString());
             if (body.booking.doctor_id) formData.append('metadata[doctor_id]', body.booking.doctor_id);
             if (body.booking.doctor_name) formData.append('metadata[doctor_name]', body.booking.doctor_name);
             // Slot lock: Pass pending booking ID so n8n can promote to confirmed
@@ -52,7 +53,9 @@ export async function onRequestPost(context) {
         if (body.customer) {
             formData.append('metadata[customer_name]', body.customer.name);
             formData.append('metadata[customer_email]', body.customer.email);
-            formData.append('metadata[customer_phone]', body.customer.phone);
+            if (body.customer.phone && body.customer.phone.length > 5) {
+                formData.append('metadata[customer_phone]', body.customer.phone);
+            }
             formData.append('customer_email', body.customer.email);
         }
 

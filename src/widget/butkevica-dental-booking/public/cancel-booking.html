@@ -538,7 +538,18 @@
         async function loadBookingDetails() {
             try {
                 const response = await fetch(`/api/get-booking?token=${encodeURIComponent(token)}`);
-                const data = await response.json();
+                const responseText = await response.text();
+
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error("Failed to parse JSON response:", responseText);
+                    if (!response.ok) {
+                        throw new Error(`Server Error (${response.status}): ${responseText.substring(0, 200)}`);
+                    }
+                    throw new Error(`Invalid server response format. Please contact support. Debug: ${responseText.substring(0, 50)}...`);
+                }
 
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to load booking');
@@ -553,6 +564,7 @@
                 displayBookingDetails(data);
 
             } catch (error) {
+                console.error("Error loading booking:", error);
                 showError(error.message || translations[currentLang].invalidToken);
             }
         }
@@ -610,7 +622,15 @@
                     })
                 });
 
-                const data = await response.json();
+                const responseText = await response.text();
+                let data;
+
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error("Failed to parse JSON response:", responseText);
+                    throw new Error(`Server Error: ${responseText.substring(0, 100)}`);
+                }
 
                 if (!response.ok) {
                     throw new Error(data.error || 'Cancellation failed');
