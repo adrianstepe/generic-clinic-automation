@@ -1,3 +1,9 @@
 name = "butkevica-dental-booking"
+# Static assets are in the widget's dist folder
 pages_build_output_dir = "src/widget/butkevica-dental-booking/dist"
 compatibility_date = "2025-11-01"
+
+# IMPORTANT: For Cloudflare Pages in a monorepo, functions must be at repo root
+# The build command copies functions from widget subdirectory to repo root
+[build]
+command = "cd src/widget/butkevica-dental-booking && npm ci && npm run build && cp -r functions ../../../"
