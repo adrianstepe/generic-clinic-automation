@@ -31,6 +31,16 @@ export async function onRequestPost(context) {
         formData.append('success_url', body.success_url);
         formData.append('cancel_url', body.cancel_url);
 
+        // Set locale for Stripe Checkout page - helps prevent module loading errors
+        // Map widget language to Stripe-supported locales
+        const widgetLang = body.booking?.language || 'en';
+        const stripeLocaleMap = {
+            'en': 'en',
+            'lv': 'lv',  // Latvian
+            'ru': 'ru'   // Russian
+        };
+        formData.append('locale', stripeLocaleMap[widgetLang] || 'auto');
+
         // Pass Metadata so we get it back in the Webhook
         if (body.booking) {
             formData.append('metadata[booking_date]', body.booking.date);
