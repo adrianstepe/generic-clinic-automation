@@ -64,6 +64,28 @@
         },
         {
             "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.body?.type || $json.type }}",
+                            "operation": "equal",
+                            "value2": "checkout.session.completed"
+                        }
+                    ]
+                }
+            },
+            "name": "Filter Event Type",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                -200,
+                -240
+            ],
+            "id": "filter-event-type",
+            "notes": "CRITICAL: Only process checkout.session.completed events. Ignore payment_intent.succeeded to prevent double bookings."
+        },
+        {
+            "parameters": {
                 "jsCode": "const item = $input.first();\nconst rawJson = item.json;\nconst eventData = rawJson.body || rawJson;\n\nif (eventData.type !== 'checkout.session.completed') {\n  return [];\n}\n\n// ========================\n// HELPER: Proper Case Name\n// ========================\nconst formatName = (str) => {\n  if (!str) return 'Pacients';\n  return str.replace(/\\w\\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());\n};\n\n// ========================\n// HELPER: Generate Cancellation Token\n// ========================\nconst generateToken = () => {\n  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n  let token = '';\n  for (let i = 0; i < 32; i++) {\n    token += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return token;\n};\n\n// ========================\n// CLINIC CONFIGURATION\n// ========================\nconst CLINIC_EMAIL = 'info@drbutkevicadentalpractice.com';\nconst CLINIC_ADDRESS = 'Dzirnavu iela 45, Centra rajons, Rīga, LV-1010';\nconst GOOGLE_MAPS_URL = 'https://www.google.com/maps/place/Dr.+Butk%C4%93vi%C4%8Das+zob%C4%81rstniec%C4%ABbas+prakse/@56.9571467,24.1135175,17z';\nconst CANCELLATION_BASE_URL = 'https://test1-3oj.pages.dev/cancel-booking.html';\n\nconst dataObject = eventData?.data?.object || {};\nconst metadata = dataObject.metadata || {};\nconst customerDetails = dataObject.customer_details || {};\n\nconst rawName = customerDetails.name || metadata.customer_name || 'Pacients';\nconst customerName = formatName(rawName);\nlet customerEmail = customerDetails.email || metadata.customer_email || 'missing@error.com';\nconst rawPhone = customerDetails.phone || metadata.customer_phone || metadata.phone || '';\nconst amountPaid = ((dataObject.amount_total || 0) / 100).toFixed(2);\nconst bookingDate = metadata.booking_date;\nconst bookingTime = metadata.booking_time;\nconst serviceName = metadata.serviceName || 'Zobārstniecības vizīte';\nconst serviceDuration = parseInt(metadata.duration) || 60;\nconst clinicId = metadata.clinic_id || 'butkevica';\n\n// ========================\n// AUTO-ASSIGNMENT: Extract doctor info from metadata\n// ========================\nconst doctorId = metadata.doctor_id || null;\nconst doctorName = metadata.doctor_name || null;\nconst serviceId = metadata.service_id || metadata.serviceId || null;\n\n// Generate cancellation token\nconst cancellationToken = generateToken();\n\n// ========================\n// TIMEZONE-SAFE TIME HANDLING\n// ========================\nlet eventStart = null;\nlet eventEnd = null;\nlet calendarLink = '';\nlet calendarStart = '';\nlet calendarEnd = '';\n\nif (bookingDate && bookingTime) {\n  eventStart = `${bookingDate}T${bookingTime}:00.000Z`;\n  \n  const [hours, minutes] = bookingTime.split(':').map(Number);\n  const totalMinutes = hours * 60 + minutes + serviceDuration;\n  const endHours = Math.floor(totalMinutes / 60) % 24;\n  const endMinutes = totalMinutes % 60;\n  const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;\n  eventEnd = `${bookingDate}T${endTime}:00.000Z`;\n  \n  const calStart = `${bookingDate.replace(/-/g, '')}T${bookingTime.replace(':', '')}00Z`;\n  const calEnd = `${bookingDate.replace(/-/g, '')}T${endTime.replace(':', '')}00Z`;\n  const calTitle = encodeURIComponent(serviceName + ' - Butkeviča Dental');\n  const calDetails = encodeURIComponent('Jūsu zobārstniecības vizīte\\n\\nAdrese: ' + CLINIC_ADDRESS);\n  const calLocation = encodeURIComponent(CLINIC_ADDRESS);\n  calendarLink = `https://calendar.google.com/calendar/r/eventedit?text=${calTitle}&dates=${calStart}/${calEnd}&details=${calDetails}&location=${calLocation}`;\n  calendarStart = eventStart;\n  calendarEnd = eventEnd;\n}\n\nlet lang = 'lv';\nif (metadata.language) {\n  lang = metadata.language.toLowerCase();\n}\n\nconst cancellationLink = `${CANCELLATION_BASE_URL}?token=${cancellationToken}&lang=${lang}`;\n\nconst bookingRef = 'BK-' + Date.now().toString(36).toUpperCase();\n\n// Return data including doctor info for auto-assignment logic\nconst result = {\n  customer_name: customerName,\n  customer_email: customerEmail,\n  customer_phone: rawPhone || null,\n  service_id: serviceId,\n  service_name: serviceName,\n  start_time: eventStart,\n  end_time: eventEnd,\n  amount_paid: parseFloat(amountPaid),\n  status: 'confirmed',\n  stripe_session_id: dataObject.id || null,\n  payment_intent_id: dataObject.payment_intent || null,\n  amount_cents: dataObject.amount_total || null,\n  currency: 'EUR',\n  client_reference: bookingRef,\n  cancellation_token: cancellationToken,\n  language: lang,\n  clinic_id: clinicId,\n  // Doctor/Specialist info for auto-assignment\n  doctor_id: doctorId,\n  doctor_name: doctorName,\n  needs_auto_assign: !doctorId,\n  // Email/calendar data (will be updated after auto-assignment)\n  booking_date: bookingDate,\n  booking_time: bookingTime,\n  calendar_link: calendarLink,\n  calendar_start: calendarStart,\n  calendar_end: calendarEnd,\n  booking_ref: bookingRef,\n  cancellation_link: cancellationLink,\n  amount_paid_display: amountPaid,\n  service_duration: serviceDuration,\n  // Config for email generation\n  CLINIC_ADDRESS: CLINIC_ADDRESS,\n  GOOGLE_MAPS_URL: GOOGLE_MAPS_URL\n};\n\nreturn [{ json: result }];"
             },
             "name": "Extract Booking Data",
@@ -315,11 +337,23 @@
             "main": [
                 [
                     {
-                        "node": "Extract Booking Data",
+                        "node": "Filter Event Type",
                         "type": "main",
                         "index": 0
                     }
                 ]
+            ]
+        },
+        "Filter Event Type": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Booking Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
             ]
         },
         "Extract Booking Data": {

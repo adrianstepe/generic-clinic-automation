@@ -23,6 +23,7 @@ export async function onRequestPost(context) {
         // Construct form-urlencoded body for Stripe API
         const formData = new URLSearchParams();
         formData.append('payment_method_types[]', 'card');
+        formData.append('payment_method_types[]', 'link');  // Enable Stripe Link one-click checkout
         formData.append('line_items[0][price_data][currency]', 'eur');
         formData.append('line_items[0][price_data][product_data][name]', body.service || 'Dental Service');
         formData.append('line_items[0][price_data][unit_amount]', body.amount.toString());
@@ -31,15 +32,10 @@ export async function onRequestPost(context) {
         formData.append('success_url', body.success_url);
         formData.append('cancel_url', body.cancel_url);
 
-        // Set locale for Stripe Checkout page - helps prevent module loading errors
-        // Map widget language to Stripe-supported locales
-        const widgetLang = body.booking?.language || 'en';
-        const stripeLocaleMap = {
-            'en': 'en',
-            'lv': 'lv',  // Latvian
-            'ru': 'ru'   // Russian
-        };
-        formData.append('locale', stripeLocaleMap[widgetLang] || 'auto');
+        // Set locale for Stripe Checkout page
+        // Use 'auto' to let Stripe determine locale from browser settings
+        // This prevents module loading errors like "Cannot find module './en'"
+        formData.append('locale', 'auto');
 
         // Pass Metadata so we get it back in the Webhook
         if (body.booking) {
