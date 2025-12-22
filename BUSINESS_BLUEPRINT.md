@@ -710,3 +710,57 @@ butkeviča-dental-booking/
 -   **n8n Node:** `Fetch Qualified Specialists` (Supabase node using PostgREST array containment filter `cs.{service_id}`).
 -   **n8n Code Node:** `Auto-Assign Specialist` (Random selection logic + consolidated email generation).
 -   **Database:** `specialist_id` column added to `bookings` for persistent tracking.
+
+### 6.15 Multi-Tenant Dynamic Branding (Added 2025-12-22)
+
+**Problem Solved:** Hardcoded branding (clinic name, email, logo) prevented onboarding new clinics without code changes. The `check-availability` Edge Function also lacked `clinic_id` filtering, causing cross-tenant data leakage.
+
+**Solution:** Dynamic branding fetched from database + true multi-tenant isolation.
+
+**Database Changes:**
+| Column | Type | Purpose |
+|--------|------|---------|
+| `clinics.logo_url` | TEXT | Clinic logo URL (optional, fallback to initials) |
+| `clinics.clinic_email` | TEXT | Clinic contact email for workflows |
+
+**Migration:** Run `sql/add_branding_columns.sql` in Supabase SQL Editor.
+
+**Frontend Changes:**
+| File | Change |
+|------|--------|
+| `types.ts` | Added `Clinic` interface with `logoUrl`, `clinicEmail`, `theme`, `settings` |
+| `services/configService.ts` | Added `fetchClinicDetails()` to fetch clinic metadata from Supabase |
+| `hooks/useConfig.tsx` | Exposed `clinic` object globally via React Context |
+| `constants.ts` | Added `DEFAULT_CLINIC` fallback for network failures |
+
+**Backend Changes (Critical Fix):**
+| File | Change |
+|------|--------|
+| `supabase/functions/check-availability/index.ts` | Added `.eq('clinic_id', clinicId)` filter to Supabase query. **This fixes cross-tenant data leakage.** |
+| `workflows/n8n-2-stripe-confirmation-supabase.json` | Now uses `metadata.clinic_email` with fallback to hardcoded value |
+
+**Flow After Refactor:**
+```
+Widget Mount → fetchAllConfig(clinicId)
+                    ↓
+Supabase: SELECT * FROM clinics WHERE id = 'butkevica'
+                    ↓
+ConfigContext: { clinic: { name, logoUrl, clinicEmail, ... } }
+                    ↓
+Header.tsx: Shows clinic.name instead of hardcoded "Butkeviča"
+PaymentMock.tsx: Passes clinic_email to Stripe metadata
+                    ↓
+n8n: Uses metadata.clinic_email for confirmation emails
+```
+
+**Onboarding a New Clinic:**
+1. Insert new row in `clinics` table with unique `id`, `name`, `clinic_email`
+2. Insert services in `services` table with matching `clinic_id`
+3. Insert specialists in `specialists` table with matching `clinic_id`
+4. Widget auto-fetches correct branding based on `clinicId` prop
+
+**Verification:**
+- ✅ Changing `clinics.name` in DB instantly updates widget header
+- ✅ Currency symbol displays correctly from `clinic.settings.currency`
+- ✅ Confirmation emails use `clinic_email` from metadata
+- ✅ Availability check only returns slots for the specific clinic

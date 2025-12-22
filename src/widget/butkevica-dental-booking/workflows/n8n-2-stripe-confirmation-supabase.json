@@ -86,16 +86,90 @@
         },
         {
             "parameters": {
-                "jsCode": "const item = $input.first();\nconst rawJson = item.json;\nconst eventData = rawJson.body || rawJson;\n\nif (eventData.type !== 'checkout.session.completed') {\n  return [];\n}\n\n// ========================\n// HELPER: Proper Case Name\n// ========================\nconst formatName = (str) => {\n  if (!str) return 'Pacients';\n  return str.replace(/\\w\\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());\n};\n\n// ========================\n// HELPER: Generate Cancellation Token\n// ========================\nconst generateToken = () => {\n  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n  let token = '';\n  for (let i = 0; i < 32; i++) {\n    token += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return token;\n};\n\n// ========================\n// CLINIC CONFIGURATION\n// ========================\nconst CLINIC_EMAIL = 'info@drbutkevicadentalpractice.com';\nconst CLINIC_ADDRESS = 'Dzirnavu iela 45, Centra rajons, Rīga, LV-1010';\nconst GOOGLE_MAPS_URL = 'https://www.google.com/maps/place/Dr.+Butk%C4%93vi%C4%8Das+zob%C4%81rstniec%C4%ABbas+prakse/@56.9571467,24.1135175,17z';\nconst CANCELLATION_BASE_URL = 'https://test1-3oj.pages.dev/cancel-booking.html';\n\nconst dataObject = eventData?.data?.object || {};\nconst metadata = dataObject.metadata || {};\nconst customerDetails = dataObject.customer_details || {};\n\nconst rawName = customerDetails.name || metadata.customer_name || 'Pacients';\nconst customerName = formatName(rawName);\nlet customerEmail = customerDetails.email || metadata.customer_email || 'missing@error.com';\nconst rawPhone = customerDetails.phone || metadata.customer_phone || metadata.phone || '';\nconst amountPaid = ((dataObject.amount_total || 0) / 100).toFixed(2);\nconst bookingDate = metadata.booking_date;\nconst bookingTime = metadata.booking_time;\nconst serviceName = metadata.serviceName || 'Zobārstniecības vizīte';\nconst serviceDuration = parseInt(metadata.duration) || 60;\nconst clinicId = metadata.clinic_id || 'butkevica';\n\n// ========================\n// AUTO-ASSIGNMENT: Extract doctor info from metadata\n// ========================\nconst doctorId = metadata.doctor_id || null;\nconst doctorName = metadata.doctor_name || null;\nconst serviceId = metadata.service_id || metadata.serviceId || null;\n\n// Generate cancellation token\nconst cancellationToken = generateToken();\n\n// ========================\n// TIMEZONE-SAFE TIME HANDLING\n// ========================\nlet eventStart = null;\nlet eventEnd = null;\nlet calendarLink = '';\nlet calendarStart = '';\nlet calendarEnd = '';\n\nif (bookingDate && bookingTime) {\n  eventStart = `${bookingDate}T${bookingTime}:00.000Z`;\n  \n  const [hours, minutes] = bookingTime.split(':').map(Number);\n  const totalMinutes = hours * 60 + minutes + serviceDuration;\n  const endHours = Math.floor(totalMinutes / 60) % 24;\n  const endMinutes = totalMinutes % 60;\n  const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;\n  eventEnd = `${bookingDate}T${endTime}:00.000Z`;\n  \n  const calStart = `${bookingDate.replace(/-/g, '')}T${bookingTime.replace(':', '')}00Z`;\n  const calEnd = `${bookingDate.replace(/-/g, '')}T${endTime.replace(':', '')}00Z`;\n  const calTitle = encodeURIComponent(serviceName + ' - Butkeviča Dental');\n  const calDetails = encodeURIComponent('Jūsu zobārstniecības vizīte\\n\\nAdrese: ' + CLINIC_ADDRESS);\n  const calLocation = encodeURIComponent(CLINIC_ADDRESS);\n  calendarLink = `https://calendar.google.com/calendar/r/eventedit?text=${calTitle}&dates=${calStart}/${calEnd}&details=${calDetails}&location=${calLocation}`;\n  calendarStart = eventStart;\n  calendarEnd = eventEnd;\n}\n\nlet lang = 'lv';\nif (metadata.language) {\n  lang = metadata.language.toLowerCase();\n}\n\nconst cancellationLink = `${CANCELLATION_BASE_URL}?token=${cancellationToken}&lang=${lang}`;\n\nconst bookingRef = 'BK-' + Date.now().toString(36).toUpperCase();\n\n// Return data including doctor info for auto-assignment logic\nconst result = {\n  customer_name: customerName,\n  customer_email: customerEmail,\n  customer_phone: rawPhone || null,\n  service_id: serviceId,\n  service_name: serviceName,\n  start_time: eventStart,\n  end_time: eventEnd,\n  amount_paid: parseFloat(amountPaid),\n  status: 'confirmed',\n  stripe_session_id: dataObject.id || null,\n  payment_intent_id: dataObject.payment_intent || null,\n  amount_cents: dataObject.amount_total || null,\n  currency: 'EUR',\n  client_reference: bookingRef,\n  cancellation_token: cancellationToken,\n  language: lang,\n  clinic_id: clinicId,\n  // Doctor/Specialist info for auto-assignment\n  doctor_id: doctorId,\n  doctor_name: doctorName,\n  needs_auto_assign: !doctorId,\n  // Email/calendar data (will be updated after auto-assignment)\n  booking_date: bookingDate,\n  booking_time: bookingTime,\n  calendar_link: calendarLink,\n  calendar_start: calendarStart,\n  calendar_end: calendarEnd,\n  booking_ref: bookingRef,\n  cancellation_link: cancellationLink,\n  amount_paid_display: amountPaid,\n  service_duration: serviceDuration,\n  // Config for email generation\n  CLINIC_ADDRESS: CLINIC_ADDRESS,\n  GOOGLE_MAPS_URL: GOOGLE_MAPS_URL\n};\n\nreturn [{ json: result }];"
+                "jsCode": "const item = $input.first();\nconst rawJson = item.json;\nconst eventData = rawJson.body || rawJson;\n\nif (eventData.type !== 'checkout.session.completed') {\n  return [];\n}\n\n// ========================\n// HELPER: Proper Case Name\n// ========================\nconst formatName = (str) => {\n  if (!str) return 'Pacients';\n  return str.replace(/\\w\\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());\n};\n\n// ========================\n// HELPER: Generate Cancellation Token\n// ========================\nconst generateToken = () => {\n  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n  let token = '';\n  for (let i = 0; i < 32; i++) {\n    token += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return token;\n};\n\n// ========================\n// CLINIC CONFIGURATION\n// ========================\nconst CLINIC_EMAIL = metadata.clinic_email || 'info@drbutkevicadentalpractice.com';\nconst CLINIC_ADDRESS = 'Dzirnavu iela 45, Centra rajons, Rīga, LV-1010';\nconst GOOGLE_MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=Dr.+Butkēvičas+zobārstniecības+prakse,+Dzirnavu+iela+45,+Rīga';\nconst CANCELLATION_BASE_URL = 'https://test1-3oj.pages.dev/cancel-booking.html';\n\nconst dataObject = eventData?.data?.object || {};\nconst metadata = dataObject.metadata || {};\nconst customerDetails = dataObject.customer_details || {};\n\nconst rawName = customerDetails.name || metadata.customer_name || 'Pacients';\nconst customerName = formatName(rawName);\nlet customerEmail = customerDetails.email || metadata.customer_email || 'missing@error.com';\nconst rawPhone = customerDetails.phone || metadata.customer_phone || metadata.phone || '';\nconst amountPaid = ((dataObject.amount_total || 0) / 100).toFixed(2);\nconst bookingDate = metadata.booking_date;\nconst bookingTime = metadata.booking_time;\nconst serviceName = metadata.serviceName || 'Zobārstniecības vizīte';\nconst serviceDuration = parseInt(metadata.duration) || 60;\nconst clinicId = metadata.clinic_id || 'butkevica';\nconst pendingBookingId = metadata.pending_booking_id || null;\n\n// ========================\n// AUTO-ASSIGNMENT: Extract doctor info from metadata\n// ========================\nconst doctorId = metadata.doctor_id || null;\nconst doctorName = metadata.doctor_name || null;\nconst serviceId = metadata.service_id || metadata.serviceId || null;\n\n// Generate cancellation token\nconst cancellationToken = generateToken();\n\n// ========================\n// TIMEZONE-SAFE TIME HANDLING\n// ========================\nlet eventStart = null;\nlet eventEnd = null;\nlet calendarLink = '';\nlet calendarStart = '';\nlet calendarEnd = '';\n\nif (bookingDate && bookingTime) {\n  eventStart = `${bookingDate}T${bookingTime}:00.000Z`;\n  \n  const [hours, minutes] = bookingTime.split(':').map(Number);\n  const totalMinutes = hours * 60 + minutes + serviceDuration;\n  const endHours = Math.floor(totalMinutes / 60) % 24;\n  const endMinutes = totalMinutes % 60;\n  const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;\n  eventEnd = `${bookingDate}T${endTime}:00.000Z`;\n  \n  const calStart = `${bookingDate.replace(/-/g, '')}T${bookingTime.replace(':', '')}00Z`;\n  const calEnd = `${bookingDate.replace(/-/g, '')}T${endTime.replace(':', '')}00Z`;\n  const calTitle = encodeURIComponent(serviceName + ' - Butkeviča Dental');\n  const calDetails = encodeURIComponent('Jūsu zobārstniecības vizīte\\n\\nAdrese: ' + CLINIC_ADDRESS);\n  const calLocation = encodeURIComponent(CLINIC_ADDRESS);\n  calendarLink = `https://calendar.google.com/calendar/r/eventedit?text=${calTitle}&dates=${calStart}/${calEnd}&details=${calDetails}&location=${calLocation}`;\n  calendarStart = eventStart;\n  calendarEnd = eventEnd;\n}\n\nlet lang = 'lv';\nif (metadata.language) {\n  lang = metadata.language.toLowerCase();\n}\n\nconst cancellationLink = `${CANCELLATION_BASE_URL}?token=${cancellationToken}&lang=${lang}`;\nconst bookingRef = 'BK-' + Date.now().toString(36).toUpperCase();\n\n// Return data including doctor info for auto-assignment logic\nconst result = {\n  customer_name: customerName,\n  customer_email: customerEmail,\n  customer_phone: rawPhone || null,\n  service_id: serviceId,\n  service_name: serviceName,\n  start_time: eventStart,\n  end_time: eventEnd,\n  amount_paid: parseFloat(amountPaid),\n  status: 'confirmed',\n  stripe_session_id: dataObject.id || null,\n  payment_intent_id: dataObject.payment_intent || null,\n  amount_cents: dataObject.amount_total || null,\n  currency: 'EUR',\n  client_reference: bookingRef,\n  cancellation_token: cancellationToken,\n  language: lang,\n  clinic_id: clinicId,\n  pending_booking_id: pendingBookingId,\n  // Doctor/Specialist info for auto-assignment\n  doctor_id: doctorId,\n  doctor_name: doctorName,\n  needs_auto_assign: !doctorId,\n  // Email/calendar data (will be updated after auto-assignment)\n  booking_date: bookingDate,\n  booking_time: bookingTime,\n  calendar_link: calendarLink,\n  calendar_start: calendarStart,\n  calendar_end: calendarEnd,\n  booking_ref: bookingRef,\n  cancellation_link: cancellationLink,\n  amount_paid_display: amountPaid,\n  service_duration: serviceDuration,\n  // Config for email generation\n  CLINIC_ADDRESS: CLINIC_ADDRESS,\n  GOOGLE_MAPS_URL: GOOGLE_MAPS_URL\n};\n\nreturn [{ json: result }];"
             },
             "name": "Extract Booking Data",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                -128,
+                -48,
                 -240
             ],
             "id": "243b7fd1-a008-4096-b083-ff5f0b6e3072"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.pending_booking_id }}",
+                            "operation": "isNotEmpty"
+                        }
+                    ]
+                }
+            },
+            "name": "Check Pending ID",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                144,
+                -240
+            ],
+            "id": "check-pending-id"
+        },
+        {
+            "parameters": {
+                "operation": "update",
+                "tableId": "bookings",
+                "filterType": "string",
+                "filterString": "={{ 'id=eq.' + $json.pending_booking_id }}",
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "status",
+                            "fieldValue": "confirmed"
+                        },
+                        {
+                            "fieldId": "stripe_session_id",
+                            "fieldValue": "={{ $json.stripe_session_id }}"
+                        },
+                        {
+                            "fieldId": "payment_intent_id",
+                            "fieldValue": "={{ $json.payment_intent_id }}"
+                        },
+                        {
+                            "fieldId": "amount_paid",
+                            "fieldValue": "={{ $json.amount_paid }}"
+                        },
+                        {
+                            "fieldId": "amount_cents",
+                            "fieldValue": "={{ $json.amount_cents }}"
+                        },
+                        {
+                            "fieldId": "client_reference",
+                            "fieldValue": "={{ $json.client_reference }}"
+                        },
+                        {
+                            "fieldId": "cancellation_token",
+                            "fieldValue": "={{ $json.cancellation_token }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Update Pending Booking",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                368,
+                -380
+            ],
+            "id": "update-pending-booking",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
         },
         {
             "parameters": {
@@ -103,14 +177,14 @@
                 "tableId": "specialists",
                 "returnAll": true,
                 "filterType": "string",
-                "filterString": "={{ 'clinic_id=eq.' + $('Extract Booking Data').first().json.clinic_id + '&specialties=cs.{' + $('Extract Booking Data').first().json.service_id + '}&is_active=eq.true' }}"
+                "filterString": "={{ 'clinic_id=eq.' + $json.clinic_id + '&specialties=cs.{' + $json.service_id + '}&is_active=eq.true' }}"
             },
             "name": "Fetch Qualified Specialists",
             "type": "n8n-nodes-base.supabase",
             "typeVersion": 1,
             "position": [
-                96,
-                -380
+                368,
+                -100
             ],
             "id": "fetch-qualified-specialists",
             "credentials": {
@@ -130,64 +204,30 @@
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                320,
-                -240
+                592,
+                -100
             ],
             "id": "auto-assign-specialist"
         },
         {
             "parameters": {
-                "sendTo": "={{ $('Auto-Assign Specialist').first().json.customer_email }}",
-                "subject": "={{ $('Auto-Assign Specialist').first().json.email_subject }}",
-                "emailType": "html",
-                "message": "={{ $('Auto-Assign Specialist').first().json.email_body }}",
-                "options": {}
-            },
-            "name": "Send Confirmation Email",
-            "type": "n8n-nodes-base.gmail",
-            "typeVersion": 2.1,
-            "position": [
-                768,
-                -240
-            ],
-            "id": "efb55d66-a660-4c65-a3f0-777a4918ef30",
-            "webhookId": "5db0aaec-24c1-405f-b15d-d9a2b0c3f67a",
-            "credentials": {
-                "gmailOAuth2": {
-                    "id": "bsHsQyITlAn3DBQk",
-                    "name": "Gmail account"
-                }
-            }
-        },
-        {
-            "parameters": {
-                "calendar": {
-                    "__rl": true,
-                    "mode": "list",
-                    "value": "primary"
-                },
-                "start": "={{ $('Auto-Assign Specialist').first().json.calendar_start }}",
-                "end": "={{ $('Auto-Assign Specialist').first().json.calendar_end }}",
-                "additionalFields": {
-                    "description": "={{ $('Auto-Assign Specialist').first().json.calendar_description }}",
-                    "summary": "={{ $('Auto-Assign Specialist').first().json.calendar_summary }}",
-                    "useDefaultReminders": true
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.pending_booking_id }}",
+                            "operation": "isNotEmpty"
+                        }
+                    ]
                 }
             },
-            "id": "e9b3bb9c-4a16-4cae-9e1e-0951432c8a4c",
-            "name": "Add to Calendar",
-            "type": "n8n-nodes-base.googleCalendar",
-            "typeVersion": 1.3,
+            "name": "Check Booking Type",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
             "position": [
-                992,
-                -240
+                816,
+                -100
             ],
-            "credentials": {
-                "googleCalendarOAuth2Api": {
-                    "id": "MC4P3mZxV4TOWrs8",
-                    "name": "Google Calendar account 2"
-                }
-            }
+            "id": "check-booking-type"
         },
         {
             "parameters": {
@@ -272,12 +312,11 @@
             "type": "n8n-nodes-base.supabase",
             "typeVersion": 1,
             "position": [
-                544,
-                -240
+                1040,
+                -100
             ],
-            "id": "9d96a148-429b-4892-9a19-fc089e02b14b",
-            "name": "Save to Supabase",
-            "alwaysOutputData": true,
+            "id": "create-new-booking",
+            "name": "Create New Booking",
             "credentials": {
                 "supabaseApi": {
                     "id": "dlNOvdwAbyq59XOl",
@@ -287,27 +326,87 @@
         },
         {
             "parameters": {
-                "resource": "row",
-                "operation": "deleteRow",
+                "operation": "update",
                 "tableId": "bookings",
                 "filterType": "string",
-                "filterString": "={{ 'customer_email=eq.' + encodeURIComponent($('Auto-Assign Specialist').first().json.customer_email) + '&start_time=eq.' + encodeURIComponent($('Auto-Assign Specialist').first().json.start_time) + '&status=eq.pending' }}"
+                "filterString": "={{ 'id=eq.' + $json.pending_booking_id }}",
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "specialist_id",
+                            "fieldValue": "={{ $json.specialist_id }}"
+                        }
+                    ]
+                }
             },
+            "name": "Assign Specialist to Updated",
             "type": "n8n-nodes-base.supabase",
             "typeVersion": 1,
             "position": [
-                768,
-                -100
+                1040,
+                -380
             ],
-            "id": "delete-pending-duplicates",
-            "name": "Delete Pending Duplicates",
+            "id": "assign-specialist-updated",
             "credentials": {
                 "supabaseApi": {
                     "id": "dlNOvdwAbyq59XOl",
                     "name": "Supabase account"
                 }
+            }
+        },
+        {
+            "parameters": {
+                "sendTo": "={{ $('Auto-Assign Specialist').first().json.customer_email }}",
+                "subject": "={{ $('Auto-Assign Specialist').first().json.email_subject }}",
+                "emailType": "html",
+                "message": "={{ $('Auto-Assign Specialist').first().json.email_body }}",
+                "options": {}
             },
-            "continueOnFail": true
+            "name": "Send Confirmation Email",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                1264,
+                -240
+            ],
+            "id": "efb55d66-a660-4c65-a3f0-777a4918ef30",
+            "webhookId": "5db0aaec-24c1-405f-b15d-d9a2b0c3f67a",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "bsHsQyITlAn3DBQk",
+                    "name": "Gmail account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "calendar": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "primary"
+                },
+                "start": "={{ $('Auto-Assign Specialist').first().json.calendar_start }}",
+                "end": "={{ $('Auto-Assign Specialist').first().json.calendar_end }}",
+                "additionalFields": {
+                    "description": "={{ $('Auto-Assign Specialist').first().json.calendar_description }}",
+                    "summary": "={{ $('Auto-Assign Specialist').first().json.calendar_summary }}",
+                    "useDefaultReminders": true
+                }
+            },
+            "id": "e9b3bb9c-4a16-4cae-9e1e-0951432c8a4c",
+            "name": "Add to Calendar",
+            "type": "n8n-nodes-base.googleCalendar",
+            "typeVersion": 1.3,
+            "position": [
+                1488,
+                -240
+            ],
+            "credentials": {
+                "googleCalendarOAuth2Api": {
+                    "id": "MC4P3mZxV4TOWrs8",
+                    "name": "Google Calendar account 2"
+                }
+            }
         }
     ],
     "connections": {
@@ -360,6 +459,35 @@
             "main": [
                 [
                     {
+                        "node": "Check Pending ID",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Pending ID": {
+            "main": [
+                [
+                    {
+                        "node": "Update Pending Booking",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Fetch Qualified Specialists",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Update Pending Booking": {
+            "main": [
+                [
+                    {
                         "node": "Fetch Qualified Specialists",
                         "type": "main",
                         "index": 0
@@ -382,23 +510,47 @@
             "main": [
                 [
                     {
-                        "node": "Save to Supabase",
+                        "node": "Check Booking Type",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Save to Supabase": {
+        "Check Booking Type": {
+            "main": [
+                [
+                    {
+                        "node": "Assign Specialist to Updated",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Create New Booking",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Assign Specialist to Updated": {
             "main": [
                 [
                     {
                         "node": "Send Confirmation Email",
                         "type": "main",
                         "index": 0
-                    },
+                    }
+                ]
+            ]
+        },
+        "Create New Booking": {
+            "main": [
+                [
                     {
-                        "node": "Delete Pending Duplicates",
+                        "node": "Send Confirmation Email",
                         "type": "main",
                         "index": 0
                     }

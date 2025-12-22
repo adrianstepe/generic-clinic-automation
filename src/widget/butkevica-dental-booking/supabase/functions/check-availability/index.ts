@@ -4,6 +4,11 @@
 // Deploy: supabase functions deploy check-availability
 // Test: curl "https://<project>.supabase.co/functions/v1/check-availability?date=2025-12-07"
 
+// @ts-ignore - Deno types not available in local environment
+declare const Deno: {
+    env: { get(key: string): string | undefined };
+    serve(handler: (req: Request) => Promise<Response>): void;
+};
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // CORS headers for cross-origin requests from the widget
@@ -185,9 +190,10 @@ Deno.serve(async (req) => {
     }
 
     try {
-        // Parse date from query params
+        // Parse date and clinic_id from query params
         const url = new URL(req.url);
         const date = url.searchParams.get('date');
+        const clinicId = url.searchParams.get('clinic_id') || 'butkevica';
 
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
             return new Response(
@@ -196,7 +202,7 @@ Deno.serve(async (req) => {
             );
         }
 
-        console.log(`[Availability] Checking slots for ${date}`);
+        console.log(`[Availability] Checking slots for ${date} (Clinic: ${clinicId})`);
 
         // Weekend check: Strictly Mon-Fri
         const dayOfWeek = new Date(date).getUTCDay();
@@ -218,6 +224,7 @@ Deno.serve(async (req) => {
         const { data: dbBookings, error: dbError } = await supabase
             .from('bookings')
             .select('start_time, end_time, status, slot_lock_expires_at')
+            .eq('clinic_id', clinicId)
             .gte('start_time', `${date}T00:00:00`)
             .lte('start_time', `${date}T23:59:59`);
 

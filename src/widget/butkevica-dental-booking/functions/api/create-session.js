@@ -51,9 +51,11 @@ export async function onRequestPost(context) {
             if (body.booking.pending_booking_id) {
                 formData.append('metadata[pending_booking_id]', body.booking.pending_booking_id);
             }
-            // SaaS: Pass clinic_id
             if (body.booking.clinic_id) {
                 formData.append('metadata[clinic_id]', body.booking.clinic_id);
+            }
+            if (body.booking.clinic_email) {
+                formData.append('metadata[clinic_email]', body.booking.clinic_email);
             }
         }
         if (body.customer) {

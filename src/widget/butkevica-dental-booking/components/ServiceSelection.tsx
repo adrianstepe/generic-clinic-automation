@@ -23,7 +23,7 @@ const CATEGORY_LABELS: Record<ServiceCategory, string> = {
 
 
 const ServiceSelection: React.FC<ServiceSelectionProps> = ({ language, selectedService, onSelect }) => {
-  const { services, texts, isLoading } = useConfig();
+  const { services, texts, isLoading, clinic } = useConfig();
   const [showPriceTooltip, setShowPriceTooltip] = useState<string | null>(null);
 
   // Group services by category
@@ -132,7 +132,7 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ language, selectedS
                           {/* Price - Prominent */}
                           <div className="flex items-center gap-1">
                             <span className={`text-lg font-bold ${isSelected ? 'text-primary dark:text-teal-400' : 'text-gray-800 dark:text-white'}`}>
-                              €{service.price}
+                              {clinic.settings?.currency === 'USD' ? '$' : '€'}{service.price}
                             </span>
                             <span className="text-xs text-gray-400 dark:text-gray-500">
                               {texts.startingFrom[language]}

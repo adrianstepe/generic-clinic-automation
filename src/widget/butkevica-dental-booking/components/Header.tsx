@@ -1,6 +1,6 @@
 import React from 'react';
 import { Language } from '../types';
-import { useTexts } from '../hooks/useConfig';
+import { useConfig } from '../hooks/useConfig';
 
 interface HeaderProps {
   currentLanguage: Language;
@@ -10,15 +10,23 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentLanguage, setLanguage, theme, toggleTheme }) => {
-  const texts = useTexts();
+  const { texts, clinic } = useConfig();
+
+  // Dynamic Logo Logic: Url -> First Letter of Name -> 'D'
+  const logoContent = clinic.logoUrl ? (
+    <img src={clinic.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
+  ) : (
+    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
+      {clinic.name.charAt(0).toUpperCase()}
+    </div>
+  );
+
   return (
     <header className="flex justify-between items-center p-4 border-b bg-white dark:bg-slate-800 dark:border-slate-700 sticky top-0 z-50 shadow-sm transition-colors duration-300">
       <div className="flex items-center space-x-2">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
-          B
-        </div>
+        {logoContent}
         <div>
-          <h1 className="text-lg font-bold text-secondary dark:text-white leading-tight hidden sm:block">Butkeviča</h1>
+          <h1 className="text-lg font-bold text-secondary dark:text-white leading-tight hidden sm:block">{clinic.name}</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:block">{texts.dentalClinic[currentLanguage]}</p>
         </div>
       </div>

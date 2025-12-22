@@ -1,4 +1,4 @@
-import { Language, Service, Specialist, Translations } from './types';
+import { Language, Service, Specialist, Translations, Clinic } from './types';
 
 export const SERVICES: Service[] = [
     {
@@ -190,4 +190,19 @@ export const TEXTS: Translations = {
     timePeriodEvening: { [Language.EN]: 'Evening', [Language.LV]: 'Vakars', [Language.RU]: 'Вечер' },
     slotsAvailable: { [Language.EN]: 'slots', [Language.LV]: 'laiki', [Language.RU]: 'слотов' },
     yourAppointment: { [Language.EN]: 'Your appointment', [Language.LV]: 'Jūsu vizīte', [Language.RU]: 'Ваша запись' },
+};
+
+export const DEFAULT_CLINIC: Clinic = {
+    id: 'butkevica',
+    name: 'Butkeviča Dental Practice',
+    domain: 'drbutkevicadentalpractice.com',
+    logoUrl: '', // Uses default branding
+    clinicEmail: 'info@drbutkevicadentalpractice.com',
+    theme: {
+        primaryColor: '#0d9488'
+    },
+    settings: {
+        currency: 'EUR',
+        timezone: 'Europe/Riga'
+    }
 };

@@ -20,7 +20,7 @@ interface PaymentMockProps {
 }
 
 const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking }) => {
-  const { texts, clinicId } = useConfig();
+  const { texts, clinicId, clinic } = useConfig();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -201,7 +201,8 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
             doctor_name: booking.selectedSpecialist?.name || null,
             // SLOT LOCK: Pass pending booking ID so n8n can promote to confirmed
             pending_booking_id: pendingBookingId,
-            clinic_id: clinicId // SaaS: Identify clinic
+            clinic_id: clinicId, // SaaS: Identify clinic
+            clinic_email: clinic.clinicEmail // SaaS: Email for notifications
           }
         })
       });
@@ -324,7 +325,7 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
         {/* Total Cost */}
         <div className="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-slate-700">
           <span className="text-sm text-gray-600 dark:text-gray-400">{texts.total[language]}</span>
-          <span className="text-sm font-medium text-gray-900 dark:text-white">€{service.price}</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-white">{clinic.settings?.currency === 'USD' ? '$' : '€'}{service.price}</span>
         </div>
 
         {/* Remaining Balance */}
@@ -332,7 +333,7 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {language === Language.EN ? 'Balance Due at Clinic' : language === Language.LV ? 'Atlikusī summa klīnikā' : 'Остаток в клинике'}
           </span>
-          <span className="text-sm font-medium text-gray-900 dark:text-white">€{remainingBalance}</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-white">{clinic.settings?.currency === 'USD' ? '$' : '€'}{remainingBalance}</span>
         </div>
 
         {/* Due Now - Large and Bold */}
@@ -345,7 +346,7 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
               {language === Language.EN ? 'Deposit to secure your slot' : language === Language.LV ? 'Depozīts rezervācijai' : 'Депозит для бронирования'}
             </span>
           </div>
-          <span className="text-2xl font-bold text-primary">€{depositAmount}</span>
+          <span className="text-2xl font-bold text-primary">{clinic.settings?.currency === 'USD' ? '$' : '€'}{depositAmount}</span>
         </div>
       </div>
 
@@ -404,7 +405,7 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
-                  <span>{texts.paySecure[language]} • €{depositAmount}</span>
+                  <span>{texts.paySecure[language]} • {clinic.settings?.currency === 'USD' ? '$' : '€'}{depositAmount}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>

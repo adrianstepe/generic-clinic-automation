@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient';
-import { Language, Service, Specialist, Translations, ServiceCategory } from '../types';
-import { SERVICES as FALLBACK_SERVICES, SPECIALISTS as FALLBACK_SPECIALISTS, TEXTS as FALLBACK_TEXTS } from '../constants';
+import { Language, Service, Specialist, Translations, ServiceCategory, Clinic } from '../types';
+import { SERVICES as FALLBACK_SERVICES, SPECIALISTS as FALLBACK_SPECIALISTS, TEXTS as FALLBACK_TEXTS, DEFAULT_CLINIC } from '../constants';
 
 // ===========================================
 // CONFIG SERVICE: Dynamic Configuration from Supabase
@@ -114,6 +114,7 @@ function mapSpecialistRowToSpecialist(row: SpecialistRow): Specialist {
 let cachedServices: Service[] | null = null;
 let cachedSpecialists: Specialist[] | null = null;
 let cachedTexts: Translations | null = null;
+let cachedClinic: Clinic | null = null;
 let cacheTimestamp: number = 0;
 let cachedClinicId: string | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -220,36 +221,77 @@ export async function fetchTranslations(clinicId: string): Promise<Translations>
 }
 
 /**
+ * Fetch clinic details from Supabase 'clinics' table
+ */
+export async function fetchClinicDetails(clinicId: string): Promise<Clinic> {
+  if (cachedClinic && isCacheValid(clinicId)) return cachedClinic;
+
+  try {
+    const { data, error } = await supabase
+      .from('clinics')
+      .select('*')
+      .eq('id', clinicId)
+      .single();
+
+    if (error) {
+      console.warn('[ConfigService] Supabase error clinic:', error);
+      return DEFAULT_CLINIC;
+    }
+    if (!data) return DEFAULT_CLINIC;
+
+    const clinic: Clinic = {
+      id: data.id,
+      name: data.name,
+      domain: data.domain,
+      logoUrl: data.logo_url,
+      clinicEmail: data.clinic_email,
+      theme: data.theme,
+      settings: data.settings
+    };
+
+    cachedClinic = clinic;
+    return clinic;
+  } catch (err) {
+    console.warn('[ConfigService] Network error clinic:', err);
+    return DEFAULT_CLINIC;
+  }
+}
+
+/**
  * Fetch all configuration at once
  */
 export async function fetchAllConfig(clinicId: string): Promise<{
   services: Service[];
   specialists: Specialist[];
   texts: Translations;
+  clinic: Clinic;
 }> {
   // Reset cache if clinic changed (implicit in isCacheValid, but ensuring consistency)
   if (cachedClinicId !== clinicId) {
     cachedServices = null;
     cachedSpecialists = null;
     cachedTexts = null;
+    cachedClinic = null;
   }
 
-  const [services, specialists, texts] = await Promise.all([
+  const [services, specialists, texts, clinic] = await Promise.all([
     fetchServices(clinicId),
     fetchSpecialists(clinicId),
-    fetchTranslations(clinicId)
+    fetchTranslations(clinicId),
+    fetchClinicDetails(clinicId)
   ]);
 
   cachedClinicId = clinicId;
   cacheTimestamp = Date.now();
 
-  return { services, specialists, texts };
+  return { services, specialists, texts, clinic };
 }
 
 export function clearConfigCache(): void {
   cachedServices = null;
   cachedSpecialists = null;
   cachedTexts = null;
+  cachedClinic = null;
   cachedClinicId = null;
   cacheTimestamp = 0;
 }

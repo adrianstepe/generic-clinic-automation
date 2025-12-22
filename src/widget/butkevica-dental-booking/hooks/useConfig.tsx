@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Service, Specialist, Translations } from '../types';
+import { Service, Specialist, Translations, Clinic } from '../types';
 import { fetchAllConfig } from '../services/configService';
-import { SERVICES as FALLBACK_SERVICES, SPECIALISTS as FALLBACK_SPECIALISTS, TEXTS as FALLBACK_TEXTS } from '../constants';
+import { SERVICES as FALLBACK_SERVICES, SPECIALISTS as FALLBACK_SPECIALISTS, TEXTS as FALLBACK_TEXTS, DEFAULT_CLINIC } from '../constants';
 
 // ===========================================
 // CONFIG CONTEXT: React Context for Dynamic Configuration
@@ -13,6 +13,7 @@ interface ConfigContextType {
     services: Service[];
     specialists: Specialist[];
     texts: Translations;
+    clinic: Clinic;
     isLoading: boolean;
     error: string | null;
     clinicId: string;
@@ -30,6 +31,7 @@ export function ConfigProvider({ children, clinicId }: ConfigProviderProps) {
     const [services, setServices] = useState<Service[]>(FALLBACK_SERVICES);
     const [specialists, setSpecialists] = useState<Specialist[]>(FALLBACK_SPECIALISTS);
     const [texts, setTexts] = useState<Translations>(FALLBACK_TEXTS);
+    const [clinic, setClinic] = useState<Clinic>(DEFAULT_CLINIC);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +43,7 @@ export function ConfigProvider({ children, clinicId }: ConfigProviderProps) {
             setServices(config.services);
             setSpecialists(config.specialists);
             setTexts(config.texts);
+            setClinic(config.clinic);
         } catch (err) {
             console.error('[ConfigProvider] Failed to load config:', err);
             setError('Failed to load configuration');
@@ -60,6 +63,7 @@ export function ConfigProvider({ children, clinicId }: ConfigProviderProps) {
         services,
         specialists,
         texts,
+        clinic,
         isLoading,
         error,
         clinicId,

@@ -317,7 +317,7 @@
         },
         {
             "parameters": {
-                "operation": "deleteRow",
+                "operation": "delete",
                 "tableId": "bookings",
                 "filterType": "string",
                 "filterString": "={{ 'customer_email=eq.' + encodeURIComponent($('Extract Booking Data').first().json.customer_email) + '&start_time=eq.' + encodeURIComponent($('Extract Booking Data').first().json.start_time) + '&status=eq.pending' }}"

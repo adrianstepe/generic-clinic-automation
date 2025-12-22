@@ -64,3 +64,18 @@ export interface UserProfile {
   clinic_id?: string; // SaaS: Clinic ID for multi-tenancy
   specialist_id?: string; // Links to specialists table for doctors
 }
+
+export interface Clinic {
+  id: string;
+  name: string;
+  domain: string;
+  logoUrl?: string;
+  clinicEmail?: string;
+  theme?: {
+    primaryColor?: string;
+  };
+  settings?: {
+    currency?: string;
+    timezone?: string;
+  };
+}
