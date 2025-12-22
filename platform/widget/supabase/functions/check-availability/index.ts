@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
         // Parse date and clinic_id from query params
         const url = new URL(req.url);
         const date = url.searchParams.get('date');
-        const clinicId = url.searchParams.get('clinic_id') || 'butkevica';
+        const clinicId = url.searchParams.get('clinic_id') || 'sample';
 
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
             return new Response(

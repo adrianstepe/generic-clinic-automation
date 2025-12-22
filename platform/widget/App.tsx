@@ -11,9 +11,12 @@ import CalendarPage from './components/dashboard/pages/CalendarPage';
 import ServicesPage from './components/dashboard/pages/ServicesPage';
 import SpecialistsPage from './components/dashboard/pages/SpecialistsPage';
 
+// Clinic ID is set via environment variable (VITE_CLINIC_ID) or defaults to 'sample'
+const CLINIC_ID = import.meta.env.VITE_CLINIC_ID || 'sample';
+
 function App() {
   return (
-    <ConfigProvider clinicId="butkevica">
+    <ConfigProvider clinicId={CLINIC_ID}>
       <UserProvider>
         <Router>
           <Routes>

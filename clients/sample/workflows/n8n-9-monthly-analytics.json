@@ -1,0 +1,286 @@
+{
+    "name": "Monthly Analytics Report",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                -400,
+                300
+            ],
+            "id": "manual-trigger-analytics"
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 9 1 * *"
+                        }
+                    ]
+                }
+            },
+            "name": "Cron (1st of Month 9AM)",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                -400,
+                100
+            ],
+            "id": "cron-1st-of-month"
+        },
+        {
+            "parameters": {
+                "jsCode": "// ⚠️ TODO: FOR PRODUCTION - Change back to LAST month!\n// Currently showing CURRENT month for testing purposes.\n// To revert: use lastMonth.setMonth(lastMonth.getMonth() - 1)\n\n// Calculate CURRENT month's date range (for testing)\nconst now = new Date();\nconst year = now.getFullYear();\nconst month = now.getMonth();\n\nconst monthStart = new Date(year, month, 1).toISOString();\nconst monthEnd = now.toISOString(); // Up to current moment\n\n// Latvian month names\nconst monthNamesLV = ['Janvāris', 'Februāris', 'Marts', 'Aprīlis', 'Maijs', 'Jūnijs', 'Jūlijs', 'Augusts', 'Septembris', 'Oktobris', 'Novembris', 'Decembris'];\n\nreturn {\n  json: {\n    month_start: monthStart,\n    month_end: monthEnd,\n    month_name: monthNamesLV[month],\n    year: year,\n    report_title: `${monthNamesLV[month]} ${year} Analītikas Pārskats (līdz šim)`\n  }\n};"
+            },
+            "name": "Calculate Month Range",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -176,
+                200
+            ],
+            "id": "calc-month-range"
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "tableId": "bookings",
+                "returnAll": true,
+                "filterType": "string",
+                "filterString": "={{ 'and=(created_at.gte.' + $json.month_start + ',created_at.lte.' + $json.month_end + ',status.neq.pending,status.neq.expired)' }}"
+            },
+            "name": "Fetch Monthly Bookings",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                48,
+                100
+            ],
+            "id": "fetch-monthly-bookings",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "tableId": "booking_events",
+                "returnAll": true,
+                "filterType": "string",
+                "filterString": "={{ 'and=(created_at.gte.' + $('Calculate Month Range').first().json.month_start + ',created_at.lte.' + $('Calculate Month Range').first().json.month_end + ')' }}"
+            },
+            "name": "Fetch Funnel Events",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                48,
+                300
+            ],
+            "id": "fetch-funnel-events",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "tableId": "clinic_services",
+                "returnAll": true
+            },
+            "name": "Fetch Services",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                48,
+                500
+            ],
+            "id": "fetch-services",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "dlNOvdwAbyq59XOl",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Aggregate analytics data\nconst monthData = $('Calculate Month Range').first().json;\nconst bookings = $('Fetch Monthly Bookings').all().map(b => b.json);\nconst events = $('Fetch Funnel Events').all().map(e => e.json);\nconst services = $('Fetch Services').all().map(s => s.json);\n\n// Build service lookup (clinic_services table has: id, name_en, name_lv, price_cents, duration_minutes)\nconst serviceMap = {};\nfor (const s of services) {\n  serviceMap[s.id] = { name: s.name_en || s.name_lv, price: (s.price_cents || 0) / 100 };\n}\n\n// === BOOKING METRICS ===\nconst totalBookings = bookings.length;\nconst confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;\nconst cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;\nconst completedBookings = bookings.filter(b => b.actual_status === 'completed').length;\nconst noShowBookings = bookings.filter(b => b.actual_status === 'no_show').length;\n\n// Revenue calculation - use booking's amount_cents if available, otherwise service price\nlet totalRevenue = 0;\nfor (const b of bookings.filter(b => b.status === 'confirmed')) {\n  if (b.amount_cents) {\n    totalRevenue += b.amount_cents / 100;\n  } else {\n    const service = serviceMap[b.service_id];\n    if (service) totalRevenue += service.price;\n  }\n}\n\n// Unique patients\nconst uniqueEmails = new Set(bookings.map(b => b.customer_email?.toLowerCase()).filter(Boolean));\nconst uniquePatients = uniqueEmails.size;\n\n// Return patients (multiple bookings)\nconst emailCounts = {};\nfor (const b of bookings) {\n  const email = b.customer_email?.toLowerCase();\n  if (email) emailCounts[email] = (emailCounts[email] || 0) + 1;\n}\nconst returningPatients = Object.values(emailCounts).filter(c => c > 1).length;\n\n// Average lead time\nconst leadTimes = bookings.filter(b => b.start_time && b.created_at).map(b => {\n  const created = new Date(b.created_at);\n  const start = new Date(b.start_time);\n  return (start - created) / (1000 * 60 * 60 * 24); // days\n});\nconst avgLeadTime = leadTimes.length ? (leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length).toFixed(1) : 0;\n\n// Top services - use service_name from booking if available\nconst serviceCounts = {};\nfor (const b of bookings.filter(b => b.status === 'confirmed')) {\n  const sid = b.service_id;\n  if (!serviceCounts[sid]) {\n    serviceCounts[sid] = {\n      count: 0,\n      revenue: 0,\n      name: b.service_name || serviceMap[sid]?.name || sid\n    };\n  }\n  serviceCounts[sid].count++;\n  if (b.amount_cents) {\n    serviceCounts[sid].revenue += b.amount_cents / 100;\n  } else if (serviceMap[sid]) {\n    serviceCounts[sid].revenue += serviceMap[sid].price;\n  }\n}\n\nconst topServices = Object.entries(serviceCounts)\n  .map(([id, data]) => ({\n    name: data.name,\n    count: data.count,\n    revenue: data.revenue\n  }))\n  .sort((a, b) => b.revenue - a.revenue)\n  .slice(0, 5);\n\n// Reviews\nconst reviewsRequested = bookings.filter(b => b.review_requested_at).length;\nconst reviewsCompleted = bookings.filter(b => b.review_completed_at).length;\n\n// === FUNNEL METRICS ===\nconst eventCounts = {};\nfor (const e of events) {\n  eventCounts[e.event_type] = (eventCounts[e.event_type] || 0) + 1;\n}\n\nconst widgetOpens = eventCounts['widget_open'] || 0;\nconst step1 = eventCounts['step_1_service'] || 0;\nconst step2 = eventCounts['step_2_specialist'] || 0;\nconst step3 = eventCounts['step_3_datetime'] || 0;\nconst step4 = eventCounts['step_4_details'] || 0;\nconst step5 = eventCounts['step_5_payment'] || 0;\nconst completed = eventCounts['booking_complete'] || 0;\n\n// Conversion rates\nconst conversionRate = widgetOpens > 0 ? ((completed / widgetOpens) * 100).toFixed(1) : 0;\n\n// Show rate\nconst showRate = completedBookings + noShowBookings > 0\n  ? ((completedBookings / (completedBookings + noShowBookings)) * 100).toFixed(0)\n  : 'N/A';\n\nreturn {\n  json: {\n    ...monthData,\n    // Core metrics\n    total_bookings: totalBookings,\n    confirmed_bookings: confirmedBookings,\n    cancelled_bookings: cancelledBookings,\n    total_revenue: totalRevenue.toFixed(2),\n    unique_patients: uniquePatients,\n    returning_patients: returningPatients,\n    avg_lead_time_days: avgLeadTime,\n    // Outcomes\n    completed_bookings: completedBookings,\n    no_show_bookings: noShowBookings,\n    show_rate: showRate,\n    // Reviews\n    reviews_requested: reviewsRequested,\n    reviews_completed: reviewsCompleted,\n    review_conversion_rate: reviewsRequested > 0 ? ((reviewsCompleted / reviewsRequested) * 100).toFixed(0) : 'N/A',\n    // Funnel\n    widget_opens: widgetOpens,\n    funnel_step_1: step1,\n    funnel_step_2: step2,\n    funnel_step_3: step3,\n    funnel_step_4: step4,\n    funnel_step_5: step5,\n    funnel_completed: completed,\n    conversion_rate: conversionRate,\n    // Top services\n    top_services: topServices\n  }\n};"
+            },
+            "name": "Aggregate Analytics",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                272,
+                200
+            ],
+            "id": "aggregate-analytics"
+        },
+        {
+            "parameters": {
+                "jsCode": "const d = $input.first().json;\n\n// Latvian month names for report title\nconst monthNamesLV = ['Janvāris', 'Februāris', 'Marts', 'Aprīlis', 'Maijs', 'Jūnijs', 'Jūlijs', 'Augusts', 'Septembris', 'Oktobris', 'Novembris', 'Decembris'];\nconst reportTitleLV = `${monthNamesLV[new Date(d.month_start).getMonth()]} ${d.year} Analītikas Pārskats`;\n\n// Build HTML report\nconst topServicesHTML = d.top_services.map((s, i) => \n  `<tr><td>${i + 1}. ${s.name}</td><td>${s.count}</td><td>€${s.revenue.toFixed(2)}</td></tr>`\n).join('');\n\nconst funnelHTML = `\n<table style=\"width: 100%; border-collapse: collapse;\">\n  <tr style=\"background: #f1f5f9;\"><td style=\"padding: 8px;\">Logrīka atvēršana</td><td style=\"padding: 8px; text-align: right;\">${d.widget_opens}</td></tr>\n  <tr><td style=\"padding: 8px;\">→ Pakalpojums izvēlēts</td><td style=\"padding: 8px; text-align: right;\">${d.funnel_step_1}</td></tr>\n  <tr style=\"background: #f1f5f9;\"><td style=\"padding: 8px;\">→ Datums/laiks izvēlēts</td><td style=\"padding: 8px; text-align: right;\">${d.funnel_step_3}</td></tr>\n  <tr><td style=\"padding: 8px;\">→ Dati ievadīti</td><td style=\"padding: 8px; text-align: right;\">${d.funnel_step_4}</td></tr>\n  <tr style=\"background: #f1f5f9;\"><td style=\"padding: 8px;\">→ Maksājums sākts</td><td style=\"padding: 8px; text-align: right;\">${d.funnel_step_5}</td></tr>\n  <tr style=\"background: #10b981; color: white;\"><td style=\"padding: 8px;\"><strong>Pieraksti pabeigti</strong></td><td style=\"padding: 8px; text-align: right;\"><strong>${d.funnel_completed}</strong></td></tr>\n</table>\n`;\n\nconst emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }\n    .header h1 { margin: 0; font-size: 24px; }\n    .content { background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; }\n    .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }\n    .metric-card { background: white; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }\n    .metric-value { font-size: 28px; font-weight: 700; color: #0d9488; }\n    .metric-label { font-size: 12px; color: #64748b; text-transform: uppercase; }\n    .section { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }\n    .section h3 { margin-top: 0; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }\n    table { width: 100%; border-collapse: collapse; }\n    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }\n    th { background: #f1f5f9; font-weight: 600; }\n    .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 14px; }\n    .highlight { background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>📊 ${reportTitleLV}</h1>\n    <p>Butkeviča Zobārstniecības Prakse</p>\n  </div>\n  <div class=\"content\">\n    <div class=\"metric-grid\">\n      <div class=\"metric-card\">\n        <div class=\"metric-value\">${d.total_bookings}</div>\n        <div class=\"metric-label\">Kopā pieraksti</div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-value\">€${d.total_revenue}</div>\n        <div class=\"metric-label\">Ieņēmumi</div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-value\">${d.unique_patients}</div>\n        <div class=\"metric-label\">Unikālie pacienti</div>\n      </div>\n    </div>\n\n    <div class=\"metric-grid\">\n      <div class=\"metric-card\">\n        <div class=\"metric-value\">${d.show_rate}%</div>\n        <div class=\"metric-label\">Ierašanās rādītājs</div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-value\">${d.returning_patients}</div>\n        <div class=\"metric-label\">Atgriežas pacienti</div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-value\">${d.avg_lead_time_days}d</div>\n        <div class=\"metric-label\">Vid. pieteikšanās laiks</div>\n      </div>\n    </div>\n\n    <div class=\"section\">\n      <h3>📈 Pierakstu rezultāti</h3>\n      <table>\n        <tr><th>Statuss</th><th>Skaits</th></tr>\n        <tr><td>✅ Apstiprināti</td><td>${d.confirmed_bookings}</td></tr>\n        <tr><td>❌ Atcelti</td><td>${d.cancelled_bookings}</td></tr>\n        <tr><td>👤 Pabeigti (ieradās)</td><td>${d.completed_bookings}</td></tr>\n        <tr><td>🚫 Neieradās</td><td>${d.no_show_bookings}</td></tr>\n      </table>\n    </div>\n\n    <div class=\"section\">\n      <h3>⭐ Google atsauksmes</h3>\n      <table>\n        <tr><th>Metrika</th><th>Skaits</th></tr>\n        <tr><td>Pieprasītas atsauksmes</td><td>${d.reviews_requested}</td></tr>\n        <tr><td>Saņemtas atsauksmes</td><td>${d.reviews_completed}</td></tr>\n        <tr><td>Konversijas rādītājs</td><td>${d.review_conversion_rate}%</td></tr>\n      </table>\n    </div>\n\n    <div class=\"section\">\n      <h3>💰 Populārākie pakalpojumi pēc ieņēmumiem</h3>\n      <table>\n        <tr><th>Pakalpojums</th><th>Pieraksti</th><th>Ieņēmumi</th></tr>\n        ${topServicesHTML || '<tr><td colspan=\"3\">Šomēnes nav pierakstu</td></tr>'}\n      </table>\n    </div>\n\n    <div class=\"section\">\n      <h3>🔄 Pierakstu piltuve</h3>\n      <p style=\"color: #64748b; font-size: 14px;\">Konversijas rādītājs: <strong>${d.conversion_rate}%</strong> no logrīka apmeklētājiem pabeidza pierakstu</p>\n      ${funnelHTML}\n    </div>\n\n    <div class=\"highlight\">\n      💡 <strong>Galvenais secinājums:</strong> \n      ${d.total_bookings > 0 ? \n        `Šomēnes jums bija ${d.total_bookings} pieraksti, kas radīja €${d.total_revenue} ieņēmumus. ${d.returning_patients} pacienti atgriezās atkārtotiem apmeklējumiem.` :\n        'Šomēnes nav reģistrēti pieraksti. Pārbaudiet, vai izsekošana ir pareizi konfigurēta.'\n      }\n    </div>\n\n    <div class=\"footer\">\n      <p>Šis pārskats tika automātiski ģenerēts ar jūsu pierakstu automatizācijas sistēmu.</p>\n      <p>Jautājumi? Atbildiet uz šo e-pastu.</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    ...d,\n    email_subject: `📊 ${reportTitleLV} - Butkeviča Zobārstniecība`,\n    email_body: emailBody\n  }\n};"
+            },
+            "name": "Generate Report HTML",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                496,
+                200
+            ],
+            "id": "generate-report-html"
+        },
+        {
+            "parameters": {
+                "sendTo": "",
+                "subject": "={{ $json.email_subject }}",
+                "message": "={{ $json.email_body }}",
+                "options": {}
+            },
+            "name": "Send to Clinic",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                720,
+                100
+            ],
+            "id": "send-to-clinic",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "R3XkS40X8bOhGEL1",
+                    "name": "Gmail account 2"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "sendTo": "your-email@example.com",
+                "subject": "={{ $json.email_subject }} [SaaS Copy]",
+                "message": "={{ $json.email_body }}",
+                "options": {}
+            },
+            "name": "Send to Owner",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                720,
+                300
+            ],
+            "id": "send-to-owner",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "R3XkS40X8bOhGEL1",
+                    "name": "Gmail account 2"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Calculate Month Range",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Cron (1st of Month 9AM)": {
+            "main": [
+                [
+                    {
+                        "node": "Calculate Month Range",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Calculate Month Range": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Monthly Bookings",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Monthly Bookings": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Funnel Events",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Funnel Events": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Services",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Services": {
+            "main": [
+                [
+                    {
+                        "node": "Aggregate Analytics",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Aggregate Analytics": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Report HTML",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Report HTML": {
+            "main": [
+                [
+                    {
+                        "node": "Send to Clinic",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Send to Owner",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "edb1e678c20bb2dc211861028fa5a0da62086103c19f921423bcdc604ef1f332"
+    }
+}

@@ -1,10 +1,10 @@
 {
-    "name": "butkevica-dental-workspace",
+    "name": "generic-clinic-automation",
     "version": "1.0.0",
-    "description": "Dental booking automation workspace",
+    "description": "Multi-tenant clinic booking automation platform",
     "scripts": {
-        "build": "cd src/widget/butkevica-dental-booking && npm install && npm run build && cp -r functions dist/",
-        "dev": "cd src/widget/butkevica-dental-booking && npm run dev"
+        "build": "cd platform/widget && npm install && npm run build && cp -r functions dist/",
+        "dev": "cd platform/widget && npm run dev"
     },
     "private": true
 }

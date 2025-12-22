@@ -193,11 +193,11 @@ export const TEXTS: Translations = {
 };
 
 export const DEFAULT_CLINIC: Clinic = {
-    id: 'butkevica',
-    name: 'Butkeviča Dental Practice',
-    domain: 'drbutkevicadentalpractice.com',
+    id: 'sample',
+    name: 'Sample Dental Clinic',
+    domain: 'example.com',
     logoUrl: '', // Uses default branding
-    clinicEmail: 'info@drbutkevicadentalpractice.com',
+    clinicEmail: 'clinic@example.com',
     theme: {
         primaryColor: '#0d9488'
     },

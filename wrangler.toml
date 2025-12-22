@@ -1,7 +1,7 @@
-name = "butkevica-dental-booking"
-pages_build_output_dir = "src/widget/butkevica-dental-booking/dist"
+name = "clinic-booking-widget"
+pages_build_output_dir = "platform/widget/dist"
 compatibility_date = "2025-11-01"
 
 # NOTE: Build command must be set in Cloudflare Dashboard (not supported in wrangler.toml for Pages)
 # Dashboard -> Settings -> Build -> Build command:
-# cd src/widget/butkevica-dental-booking && npm ci && npm run build && cp -r functions ../../../
+# cd platform/widget && npm ci && npm run build && cp -r functions dist/

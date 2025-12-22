@@ -1,0 +1,154 @@
+{
+    "name": "Google Review Request (3h Post-Appointment)",
+    "nodes": [
+        {
+            "parameters": {
+                "triggerTimes": {
+                    "item": [
+                        {
+                            "mode": "everyX",
+                            "value": 30,
+                            "unit": "minutes"
+                        }
+                    ]
+                }
+            },
+            "name": "Cron (Every 30m)",
+            "type": "n8n-nodes-base.cron",
+            "typeVersion": 1,
+            "position": [
+                0,
+                0
+            ],
+            "id": "cron-trigger"
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT * FROM bookings \nWHERE status = 'confirmed' \nAND end_time >= NOW() - INTERVAL '3 hours 30 minutes' \nAND end_time < NOW() - INTERVAL '3 hours';",
+                "additionalFields": {}
+            },
+            "name": "Fetch Recent Appointments",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                200,
+                0
+            ],
+            "id": "fetch-recent",
+            "credentials": {
+                "postgres": {
+                    "id": "GuG495s0j2amZHOv",
+                    "name": "Postgres account 2"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "name": "Split Batches",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                400,
+                0
+            ],
+            "id": "split-batches"
+        },
+        {
+            "parameters": {
+                "jsCode": "// ========================\n// Multi-language Logic for Google Review Request\n// ========================\n// Uses table-based HTML for maximum email client compatibility\n// Implements 600px centered card design\n// ========================\n\nconst booking = $input.first().json;\nconst phone = (booking.customer_phone || booking.phone || '').replace(/\\\\D/g, '');\nconst rawName = booking.customer_name || 'Pacient';\nconst serviceName = booking.service_name || booking.service || '';\n\n// ========================\n// HELPER: Proper Case Name\n// ========================\nconst formatName = (str) => {\n  if (!str) return 'Pacient';\n  return str.replace(/\\\\w\\\\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());\n};\nconst name = formatName(rawName);\n\n// ========================\n// Language Detection\n// ========================\n// Priority: stored language > phone-based detection\nconst storedLang = booking.language || '';\nlet lang;\n\nif (storedLang && ['lv', 'en', 'ru'].includes(storedLang.toLowerCase())) {\n  lang = storedLang.toLowerCase();\n} else {\n  // Phone-based fallback: Latvian phones start with 371 or are 8 digits\n  const isLatvian = !phone || phone.startsWith('371') || phone.length === 8;\n  const isRussian = phone.startsWith('7') && phone.length === 11;\n  lang = isRussian ? 'ru' : (isLatvian ? 'lv' : 'en');\n}\n\nconst reviewLink = 'https://search.google.com/local/writereview?placeid=ChIJPT-F_87P7kYRZvLaa9hzpn0';\n\nlet emailSubject, emailBody;\n\n// ========================\n// TABLE-BASED HTML EMAIL TEMPLATES\n// 600px centered card design for maximum compatibility\n// ========================\n\n// --- LATVIAN (Default) ---\nif (lang === 'lv') {\n  emailSubject = `Paldies par Jūsu šodienas vizīti! 🦷`;\n  emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Paldies par Jūsu uzticību!</title>\n    <!--[if mso]>\n    <style type=\"text/css\">\n        body, table, td {font-family: Arial, Helvetica, sans-serif !important;}\n    </style>\n    <![endif]-->\n</head>\n<body style=\"margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\">\n    \n    <!-- Outer wrapper for full-width background -->\n    <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"background-color: #f3f4f6;\">\n        <tr>\n            <td align=\"center\" style=\"padding: 40px 20px;\">\n                \n                <!-- Main container - 600px card -->\n                <table role=\"presentation\" width=\"600\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);\">\n                    \n                    <!-- Header inside the card -->\n                    <tr>\n                        <td style=\"background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 28px 24px; text-align: center;\">\n                            <span style=\"font-size: 24px;\">🦷</span>\n                            <h1 style=\"color: #ffffff; margin: 8px 0 0 0; font-size: 22px; font-weight: 600;\">Paldies par Jūsu uzticību!</h1>\n                        </td>\n                    </tr>\n                    \n                    <!-- Body content -->\n                    <tr>\n                        <td style=\"padding: 32px 28px;\">\n                            \n                            <!-- Greeting -->\n                            <p style=\"font-weight: 600; font-size: 18px; margin: 0 0 8px 0; color: #1f2937;\">Labdien, ${name}!</p>\n                            \n                            <!-- Service tag -->\n                            ${serviceName ? `<p style=\"margin: 0 0 20px 0;\"><span style=\"background-color: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;\">✓ ${serviceName}</span></p>` : ''}\n                            \n                            <!-- Main message -->\n                            <p style=\"line-height: 1.7; color: #4b5563; margin: 0 0 12px 0; font-size: 15px;\">\n                                Paldies, ka šodien uzticējāt savu smaidu mums! Mēs ceram, ka Jūsu pieredze bija patīkama.\n                            </p>\n                            \n                            <p style=\"line-height: 1.7; color: #4b5563; margin: 0 0 28px 0; font-size: 15px;\">\n                                Jūsu atsauksme palīdz citiem pacientiem atrast uzticamu zobārstniecības klīniku. Vai veltīsiet 30 sekundes, lai dalītos ar savu pieredzi?\n                            </p>\n                            \n                            <!-- Star rating visual -->\n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                                <tr>\n                                    <td align=\"center\" style=\"padding: 20px 0;\">\n                                        <div style=\"background-color: #fffbeb; border-radius: 12px; padding: 20px 30px; display: inline-block;\">\n                                            <span style=\"font-size: 32px; letter-spacing: 4px;\">⭐⭐⭐⭐⭐</span>\n                                            <p style=\"font-size: 13px; color: #92400e; margin: 10px 0 0 0; font-weight: 500;\">Novērtējiet mūs Google</p>\n                                        </div>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                            <!-- CTA Button -->\n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                                <tr>\n                                    <td align=\"center\" style=\"padding: 24px 0;\">\n                                        <a href=\"${reviewLink}\" target=\"_blank\" style=\"background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 36px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);\">\n                                            Atstāt Atsauksmi →\n                                        </a>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                            <!-- Feedback callout -->\n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"margin-top: 20px;\">\n                                <tr>\n                                    <td style=\"background-color: #fffbeb; border-left: 4px solid #d97706; padding: 16px; border-radius: 0 8px 8px 0;\">\n                                        <p style=\"margin: 0; font-size: 14px; color: #92400e;\">\n                                            <strong>💬 Kaut kas nebija kārtībā?</strong><br>\n                                            <span style=\"color: #b45309;\">Lūdzu, atbildiet uz šo e-pastu — mēs personīgi to atrisināsim.</span>\n                                        </p>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                        </td>\n                    </tr>\n                </table>\n                \n                <!-- Footer outside the card -->\n                <table role=\"presentation\" width=\"600\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"max-width: 600px; width: 100%;\">\n                    <tr>\n                        <td align=\"center\" style=\"padding: 24px 20px;\">\n                            <p style=\"font-size: 13px; color: #9ca3af; margin: 0;\">Ar cieņu,</p>\n                            <p style=\"font-size: 14px; color: #6b7280; margin: 8px 0 0 0; font-weight: 500;\">Butkeviča Dental Practice</p>\n                            <p style=\"font-size: 12px; color: #9ca3af; margin: 12px 0 0 0;\">Dzirnavu iela 45, Rīga, LV-1010</p>\n                        </td>\n                    </tr>\n                </table>\n                \n            </td>\n        </tr>\n    </table>\n    \n</body>\n</html>\n`;\n}\n\n// --- RUSSIAN ---\nelse if (lang === 'ru') {\n  emailSubject = `Спасибо за сегодняшний визит! 🦷`;\n  emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Спасибо за ваше доверие!</title>\n    <!--[if mso]>\n    <style type=\"text/css\">\n        body, table, td {font-family: Arial, Helvetica, sans-serif !important;}\n    </style>\n    <![endif]-->\n</head>\n<body style=\"margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\">\n    \n    <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"background-color: #f3f4f6;\">\n        <tr>\n            <td align=\"center\" style=\"padding: 40px 20px;\">\n                \n                <table role=\"presentation\" width=\"600\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);\">\n                    \n                    <tr>\n                        <td style=\"background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 28px 24px; text-align: center;\">\n                            <span style=\"font-size: 24px;\">🦷</span>\n                            <h1 style=\"color: #ffffff; margin: 8px 0 0 0; font-size: 22px; font-weight: 600;\">Спасибо за ваше доверие!</h1>\n                        </td>\n                    </tr>\n                    \n                    <tr>\n                        <td style=\"padding: 32px 28px;\">\n                            \n                            <p style=\"font-weight: 600; font-size: 18px; margin: 0 0 8px 0; color: #1f2937;\">Здравствуйте, ${name}!</p>\n                            \n                            ${serviceName ? `<p style=\"margin: 0 0 20px 0;\"><span style=\"background-color: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;\">✓ ${serviceName}</span></p>` : ''}\n                            \n                            <p style=\"line-height: 1.7; color: #4b5563; margin: 0 0 12px 0; font-size: 15px;\">\n                                Спасибо, что сегодня доверили нам свою улыбку! Надеемся, что ваш опыт был приятным.\n                            </p>\n                            \n                            <p style=\"line-height: 1.7; color: #4b5563; margin: 0 0 28px 0; font-size: 15px;\">\n                                Ваш отзыв помогает другим пациентам найти надёжную стоматологическую клинику. Не могли бы вы уделить 30 секунд, чтобы поделиться своим опытом?\n                            </p>\n                            \n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                                <tr>\n                                    <td align=\"center\" style=\"padding: 20px 0;\">\n                                        <div style=\"background-color: #fffbeb; border-radius: 12px; padding: 20px 30px; display: inline-block;\">\n                                            <span style=\"font-size: 32px; letter-spacing: 4px;\">⭐⭐⭐⭐⭐</span>\n                                            <p style=\"font-size: 13px; color: #92400e; margin: 10px 0 0 0; font-weight: 500;\">Оцените нас в Google</p>\n                                        </div>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                                <tr>\n                                    <td align=\"center\" style=\"padding: 24px 0;\">\n                                        <a href=\"${reviewLink}\" target=\"_blank\" style=\"background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 36px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);\">\n                                            Оставить отзыв →\n                                        </a>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"margin-top: 20px;\">\n                                <tr>\n                                    <td style=\"background-color: #fffbeb; border-left: 4px solid #d97706; padding: 16px; border-radius: 0 8px 8px 0;\">\n                                        <p style=\"margin: 0; font-size: 14px; color: #92400e;\">\n                                            <strong>💬 Что-то было не так?</strong><br>\n                                            <span style=\"color: #b45309;\">Пожалуйста, ответьте на это письмо — мы лично решим проблему.</span>\n                                        </p>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                        </td>\n                    </tr>\n                </table>\n                \n                <table role=\"presentation\" width=\"600\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"max-width: 600px; width: 100%;\">\n                    <tr>\n                        <td align=\"center\" style=\"padding: 24px 20px;\">\n                            <p style=\"font-size: 13px; color: #9ca3af; margin: 0;\">С уважением,</p>\n                            <p style=\"font-size: 14px; color: #6b7280; margin: 8px 0 0 0; font-weight: 500;\">Butkeviča Dental Practice</p>\n                            <p style=\"font-size: 12px; color: #9ca3af; margin: 12px 0 0 0;\">Dzirnavu iela 45, Rīga, LV-1010</p>\n                        </td>\n                    </tr>\n                </table>\n                \n            </td>\n        </tr>\n    </table>\n    \n</body>\n</html>\n`;\n}\n\n// --- ENGLISH (Foreign Phones) ---\nelse {\n  emailSubject = `Thank you for your visit today! 🦷`;\n  emailBody = `\n<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Thank You for Your Trust!</title>\n    <!--[if mso]>\n    <style type=\"text/css\">\n        body, table, td {font-family: Arial, Helvetica, sans-serif !important;}\n    </style>\n    <![endif]-->\n</head>\n<body style=\"margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\">\n    \n    <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"background-color: #f3f4f6;\">\n        <tr>\n            <td align=\"center\" style=\"padding: 40px 20px;\">\n                \n                <table role=\"presentation\" width=\"600\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);\">\n                    \n                    <tr>\n                        <td style=\"background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 28px 24px; text-align: center;\">\n                            <span style=\"font-size: 24px;\">🦷</span>\n                            <h1 style=\"color: #ffffff; margin: 8px 0 0 0; font-size: 22px; font-weight: 600;\">Thank You for Your Trust!</h1>\n                        </td>\n                    </tr>\n                    \n                    <tr>\n                        <td style=\"padding: 32px 28px;\">\n                            \n                            <p style=\"font-weight: 600; font-size: 18px; margin: 0 0 8px 0; color: #1f2937;\">Hello, ${name}!</p>\n                            \n                            ${serviceName ? `<p style=\"margin: 0 0 20px 0;\"><span style=\"background-color: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;\">✓ ${serviceName}</span></p>` : ''}\n                            \n                            <p style=\"line-height: 1.7; color: #4b5563; margin: 0 0 12px 0; font-size: 15px;\">\n                                Thank you for trusting us with your smile today! We hope your experience was pleasant.\n                            </p>\n                            \n                            <p style=\"line-height: 1.7; color: #4b5563; margin: 0 0 28px 0; font-size: 15px;\">\n                                Your review helps other patients find a trusted dental clinic. Would you take 30 seconds to share your experience?\n                            </p>\n                            \n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                                <tr>\n                                    <td align=\"center\" style=\"padding: 20px 0;\">\n                                        <div style=\"background-color: #fffbeb; border-radius: 12px; padding: 20px 30px; display: inline-block;\">\n                                            <span style=\"font-size: 32px; letter-spacing: 4px;\">⭐⭐⭐⭐⭐</span>\n                                            <p style=\"font-size: 13px; color: #92400e; margin: 10px 0 0 0; font-weight: 500;\">Rate us on Google</p>\n                                        </div>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                                <tr>\n                                    <td align=\"center\" style=\"padding: 24px 0;\">\n                                        <a href=\"${reviewLink}\" target=\"_blank\" style=\"background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 14px 36px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);\">\n                                            Leave a Review →\n                                        </a>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"margin-top: 20px;\">\n                                <tr>\n                                    <td style=\"background-color: #fffbeb; border-left: 4px solid #d97706; padding: 16px; border-radius: 0 8px 8px 0;\">\n                                        <p style=\"margin: 0; font-size: 14px; color: #92400e;\">\n                                            <strong>💬 Something wasn't right?</strong><br>\n                                            <span style=\"color: #b45309;\">Please reply to this email — we'll personally resolve it.</span>\n                                        </p>\n                                    </td>\n                                </tr>\n                            </table>\n                            \n                        </td>\n                    </tr>\n                </table>\n                \n                <table role=\"presentation\" width=\"600\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"max-width: 600px; width: 100%;\">\n                    <tr>\n                        <td align=\"center\" style=\"padding: 24px 20px;\">\n                            <p style=\"font-size: 13px; color: #9ca3af; margin: 0;\">Best regards,</p>\n                            <p style=\"font-size: 14px; color: #6b7280; margin: 8px 0 0 0; font-weight: 500;\">Butkeviča Dental Practice</p>\n                            <p style=\"font-size: 12px; color: #9ca3af; margin: 12px 0 0 0;\">Dzirnavu iela 45, Rīga, LV-1010</p>\n                        </td>\n                    </tr>\n                </table>\n                \n            </td>\n        </tr>\n    </table>\n    \n</body>\n</html>\n`;\n}\n\nreturn {\n  json: {\n    ...booking,\n    email_subject: emailSubject,\n    email_body: emailBody\n  }\n};"
+            },
+            "name": "Language Logic",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                600,
+                0
+            ],
+            "id": "language-logic"
+        },
+        {
+            "parameters": {
+                "sendTo": "={{$json.customer_email}}",
+                "subject": "={{$json.email_subject}}",
+                "emailType": "html",
+                "message": "={{$json.email_body}}",
+                "options": {}
+            },
+            "name": "Send Email (Gmail)",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                800,
+                0
+            ],
+            "id": "send-email",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "bsHsQyITlAn3DBQk",
+                    "name": "Gmail account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Cron (Every 30m)": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Recent Appointments",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Recent Appointments": {
+            "main": [
+                [
+                    {
+                        "node": "Split Batches",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Batches": {
+            "main": [
+                [
+                    {
+                        "node": "Language Logic",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Language Logic": {
+            "main": [
+                [
+                    {
+                        "node": "Send Email (Gmail)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Email (Gmail)": {
+            "main": [
+                [
+                    {
+                        "node": "Split Batches",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
