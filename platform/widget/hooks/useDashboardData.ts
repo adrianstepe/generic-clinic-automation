@@ -92,11 +92,14 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
                 `)
                 .order('start_time', { ascending: true });
 
-            // SaaS: Filter by clinic_id
-            if (profile?.clinic_id) {
-                query = query.eq('clinic_id', profile.clinic_id);
+            // SaaS: Filter by VITE_CLINIC_ID (from environment variable)
+            // This ensures each deployment shows only its own clinic's data
+            const clinicId = import.meta.env.VITE_CLINIC_ID;
+            if (clinicId) {
+                query = query.eq('clinic_id', clinicId);
+                console.log('[Dashboard] Filtering by VITE_CLINIC_ID:', clinicId);
             } else {
-                console.warn('[Dashboard] No clinic_id found in profile, query might return empty or unauthorized data');
+                console.warn('[Dashboard] No VITE_CLINIC_ID set, showing all bookings');
             }
 
             // ROLE-BASED FILTERING: Doctors see only their appointments

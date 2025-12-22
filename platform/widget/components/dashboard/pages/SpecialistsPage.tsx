@@ -25,11 +25,14 @@ const SpecialistsPage: React.FC = () => {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
 
+    // Get clinic ID from environment variable
+    const clinicId = import.meta.env.VITE_CLINIC_ID;
+
     useEffect(() => {
-        if (profile?.clinic_id) {
+        if (clinicId) {
             fetchSpecialists();
         }
-    }, [profile]);
+    }, [clinicId]);
 
     const fetchSpecialists = async () => {
         try {
@@ -37,7 +40,7 @@ const SpecialistsPage: React.FC = () => {
             const { data, error } = await supabase
                 .from('specialists')
                 .select('*')
-                .eq('clinic_id', profile?.clinic_id);
+                .eq('clinic_id', clinicId);
 
             if (error) throw error;
 
@@ -85,7 +88,7 @@ const SpecialistsPage: React.FC = () => {
         try {
             setUploading(true);
             const fileExt = file.name.split('.').pop();
-            const fileName = `${profile?.clinic_id}/${specialistId}.${fileExt}`;
+            const fileName = `${clinicId}/${specialistId}.${fileExt}`;
 
             // Upload to Supabase Storage
             const { data, error } = await supabase.storage
@@ -166,7 +169,7 @@ const SpecialistsPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!profile?.clinic_id) return;
+        if (!clinicId) return;
 
         let photoUrl = formData.photo_url;
         const specialistId = editingId || `sp_${crypto.randomUUID().slice(0, 8)}`;
@@ -180,7 +183,7 @@ const SpecialistsPage: React.FC = () => {
         }
 
         const payload = {
-            clinic_id: profile.clinic_id,
+            clinic_id: clinicId,
             name: formData.name,
             role: {
                 en: formData.role_en,

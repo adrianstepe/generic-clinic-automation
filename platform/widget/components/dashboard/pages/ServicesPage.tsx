@@ -41,18 +41,21 @@ const ServicesPage: React.FC = () => {
         category: '', price: '', duration: '30'
     });
 
+    // Get clinic ID from environment variable
+    const clinicId = import.meta.env.VITE_CLINIC_ID;
+
     useEffect(() => {
-        if (profile?.clinic_id) {
+        if (clinicId) {
             fetchServices();
         }
-    }, [profile]);
+    }, [clinicId]);
 
     const fetchServices = async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('services')
             .select('*')
-            .eq('clinic_id', profile?.clinic_id)
+            .eq('clinic_id', clinicId)
             .order('category', { ascending: true });
 
         if (!error && data) {
@@ -99,7 +102,7 @@ const ServicesPage: React.FC = () => {
         }
 
         const payload = {
-            clinic_id: profile?.clinic_id,
+            clinic_id: clinicId,
             name: { lv: formData.nameLV, en: formData.nameEN, ru: formData.nameRU },
             category: formData.category || 'Vispārēji',
             price_cents: Math.round(parseFloat(formData.price) * 100),
