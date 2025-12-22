@@ -764,3 +764,55 @@ n8n: Uses metadata.clinic_email for confirmation emails
 - ✅ Currency symbol displays correctly from `clinic.settings.currency`
 - ✅ Confirmation emails use `clinic_email` from metadata
 - ✅ Availability check only returns slots for the specific clinic
+
+### 6.16 Super Admin Dashboard (Added 2025-12-22)
+
+**Problem Solved:** Onboarding new clinics required manual SQL inserts, making it error-prone and inaccessible to non-technical users.
+
+**Solution:** A dedicated Super Admin Dashboard at `/super-admin` route for platform owners.
+
+**Database Changes:**
+| Table/Column | Type | Purpose |
+|-------------|------|---------|
+| `super_admin_whitelist` | TABLE | Email whitelist for super admin access |
+| `super_admin_whitelist.email` | TEXT (PK) | Whitelisted email address |
+| `super_admin_whitelist.is_active` | BOOLEAN | Enable/disable without deletion |
+| `clinics.is_active` | BOOLEAN | Toggle clinic visibility |
+| `clinics.created_by` | TEXT | Audit: who created the clinic |
+
+**Migration:** Run `sql/04_super_admin.sql` in Supabase SQL Editor.
+
+**Features:**
+| Feature | Description |
+|---------|-------------|
+| Platform Stats | Total clinics, bookings, monthly revenue, unique patients |
+| Clinic List | View all clinics with status, services/specialists counts |
+| Create Clinic | Form with auto-slug generation, color picker, timezone |
+| Edit Clinic | Update branding, email, domain settings |
+| Toggle Status | Activate/deactivate clinics |
+| Template Copying | Copy services & specialists from existing clinic |
+| Deploy Instructions | Step-by-step Cloudflare Pages setup after creation |
+
+**Authentication:**
+- Separate from clinic staff roles (admin/doctor)
+- Email-based whitelist in `super_admin_whitelist` table
+- Access denied page for non-super-admins
+
+**Files Added:**
+| File | Purpose |
+|------|---------|
+| `sql/04_super_admin.sql` | Database migration |
+| `components/auth/SuperAdminRoute.tsx` | Protected route guard |
+| `components/super-admin/SuperAdminLayout.tsx` | Layout with sidebar |
+| `components/super-admin/SuperAdminSidebar.tsx` | Navigation sidebar |
+| `components/super-admin/SuperAdminDashboard.tsx` | Platform stats page |
+| `components/super-admin/ClinicsPage.tsx` | Clinic CRUD interface |
+| `components/super-admin/ClinicFormModal.tsx` | Add/edit clinic form |
+
+**New Clinic Onboarding Flow (via UI):**
+1. Navigate to `/super-admin/clinics`
+2. Click "Add New Clinic"
+3. Fill form (name auto-generates slug)
+4. Optional: Select template clinic to copy services
+5. Click "Create Clinic"
+6. Follow deployment instructions for Cloudflare Pages
