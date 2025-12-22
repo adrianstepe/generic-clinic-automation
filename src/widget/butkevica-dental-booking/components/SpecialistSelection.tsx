@@ -197,6 +197,10 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
 
   // Get traffic light dot color based on availability count
   const getAvailabilityIndicator = (date: Date) => {
+    // Weekend validation
+    const day = date.getDay();
+    if (day === 0 || day === 6) return 'disabled';
+
     const dateStr = date.toLocaleDateString('en-CA');
     const count = weekAvailability[dateStr];
 

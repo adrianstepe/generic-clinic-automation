@@ -41,8 +41,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ bookings }) => {
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const startDate = startOfWeek(currentDate, { weekStartsOn: 1 }); // Start on Monday
 
-    const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
-    const hours = Array.from({ length: 9 }).map((_, i) => i + 9); // 9 AM to 5 PM
+    const weekDays = Array.from({ length: 5 }).map((_, i) => addDays(startDate, i));
+    const hours = Array.from({ length: 9 }).map((_, i) => i + 9); // 9 AM to 6 PM (Start times)
 
     const getBookingsForSlot = (day: Date, hour: number) => {
         return bookings.filter(b => {
@@ -71,7 +71,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ bookings }) => {
                         <ChevronLeft size={20} />
                     </button>
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                        {format(startDate, 'd. MMM', { locale: lv })} - {format(addDays(startDate, 6), 'd. MMM', { locale: lv })}
+                        {format(startDate, 'd. MMM', { locale: lv })} - {format(addDays(startDate, 4), 'd. MMM', { locale: lv })}
                     </span>
                     <button
                         onClick={() => setCurrentDate(addDays(currentDate, 7))}
@@ -83,7 +83,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ bookings }) => {
             </div>
 
             <div className="flex-1 overflow-auto bg-white dark:bg-slate-800">
-                <div className="grid grid-cols-8">
+                <div className="grid grid-cols-6">
                     {/* Time Column */}
                     <div className="border-r border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50">
                         <div className="h-10 border-b border-gray-100 dark:border-slate-700"></div> {/* Header spacer */}

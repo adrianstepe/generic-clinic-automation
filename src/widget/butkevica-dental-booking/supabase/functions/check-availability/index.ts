@@ -14,7 +14,7 @@ const corsHeaders = {
 
 // Clinic configuration
 const CLINIC_START_HOUR = 9;
-const CLINIC_END_HOUR = 17;
+const CLINIC_END_HOUR = 18;
 const SLOT_DURATION_MINUTES = 60;
 
 interface TimeSlot {
@@ -197,6 +197,16 @@ Deno.serve(async (req) => {
         }
 
         console.log(`[Availability] Checking slots for ${date}`);
+
+        // Weekend check: Strictly Mon-Fri
+        const dayOfWeek = new Date(date).getUTCDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            console.log(`[Availability] Date ${date} is a weekend (Day ${dayOfWeek}). returning empty slots.`);
+            return new Response(
+                JSON.stringify({ slots: [] }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
 
         // Initialize Supabase client
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
