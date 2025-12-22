@@ -10,12 +10,14 @@ import DashboardHome from './components/dashboard/DashboardHome';
 import CalendarPage from './components/dashboard/pages/CalendarPage';
 import ServicesPage from './components/dashboard/pages/ServicesPage';
 import SpecialistsPage from './components/dashboard/pages/SpecialistsPage';
+import DoctorSchedulePage from './components/dashboard/pages/DoctorSchedulePage';
 
 // Super Admin imports
 import SuperAdminRoute from './components/auth/SuperAdminRoute';
 import SuperAdminLayout from './components/super-admin/SuperAdminLayout';
 import SuperAdminDashboard from './components/super-admin/SuperAdminDashboard';
 import ClinicsPage from './components/super-admin/ClinicsPage';
+import WorkingHoursPage from './components/super-admin/WorkingHoursPage';
 
 // Clinic ID is set via environment variable (VITE_CLINIC_ID) or defaults to 'sample'
 const CLINIC_ID = import.meta.env.VITE_CLINIC_ID || 'sample';
@@ -37,6 +39,7 @@ function App() {
                         }>
                             <Route index element={<DashboardHome />} />
                             <Route path="calendar" element={<CalendarPage />} />
+                            <Route path="schedule" element={<DoctorSchedulePage />} />
                             <Route path="services" element={<ServicesPage />} />
                             <Route path="specialists" element={<SpecialistsPage />} />
                         </Route>
@@ -49,6 +52,7 @@ function App() {
                         }>
                             <Route index element={<SuperAdminDashboard />} />
                             <Route path="clinics" element={<ClinicsPage />} />
+                            <Route path="working-hours" element={<WorkingHoursPage />} />
                         </Route>
 
                         {/* Redirect legacy admin param or unknown routes */}

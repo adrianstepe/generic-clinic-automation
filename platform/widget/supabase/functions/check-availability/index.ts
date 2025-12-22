@@ -17,10 +17,20 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Clinic configuration
-const CLINIC_START_HOUR = 9;
-const CLINIC_END_HOUR = 18;
+// Default clinic configuration (used if no database config exists)
+const DEFAULT_START_HOUR = 9;
+const DEFAULT_END_HOUR = 18;
 const SLOT_DURATION_MINUTES = 60;
+
+// Default working days (Monday-Friday)
+const DEFAULT_OPEN_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday
+
+interface WorkingHoursConfig {
+    day_of_week: number;
+    is_open: boolean;
+    open_time: string;
+    close_time: string;
+}
 
 interface TimeSlot {
     time: string;
@@ -49,17 +59,53 @@ function isOverlapping(
     return slotStart < busyEnd && slotEnd > busyStart;
 }
 
-// Generate all slots for a day
-function generateSlots(date: string): { time: string; iso: string }[] {
+// Parse time string (HH:MM) to hour number
+function parseTimeToHour(timeStr: string): number {
+    const [hours] = timeStr.split(':').map(Number);
+    return hours;
+}
+
+// Generate all slots for a day based on working hours config
+function generateSlots(date: string, startHour: number, endHour: number): { time: string; iso: string }[] {
     const slots: { time: string; iso: string }[] = [];
 
-    for (let hour = CLINIC_START_HOUR; hour < CLINIC_END_HOUR; hour++) {
+    for (let hour = startHour; hour < endHour; hour++) {
         const timeStr = `${hour.toString().padStart(2, '0')}:00`;
         const slotIso = `${date}T${timeStr}:00`;
         slots.push({ time: timeStr, iso: slotIso });
     }
 
     return slots;
+}
+
+// Fetch working hours configuration from database
+async function fetchWorkingHoursConfig(
+    supabase: any,
+    clinicId: string,
+    dayOfWeek: number
+): Promise<WorkingHoursConfig | null> {
+    try {
+        const { data, error } = await supabase
+            .from('clinic_working_hours')
+            .select('day_of_week, is_open, open_time, close_time')
+            .eq('clinic_id', clinicId)
+            .eq('day_of_week', dayOfWeek)
+            .single();
+
+        if (error) {
+            // No config found, return null to use defaults
+            if (error.code === 'PGRST116') {
+                return null;
+            }
+            console.warn('[WorkingHours] Error fetching config:', error);
+            return null;
+        }
+
+        return data;
+    } catch (error) {
+        console.warn('[WorkingHours] Exception fetching config:', error);
+        return null;
+    }
 }
 
 // Fetch Google Calendar events via service account
@@ -204,20 +250,43 @@ Deno.serve(async (req) => {
 
         console.log(`[Availability] Checking slots for ${date} (Clinic: ${clinicId})`);
 
-        // Weekend check: Strictly Mon-Fri
+        // Initialize Supabase client
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Get day of week (0 = Sunday, 6 = Saturday)
         const dayOfWeek = new Date(date).getUTCDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-            console.log(`[Availability] Date ${date} is a weekend (Day ${dayOfWeek}). returning empty slots.`);
+
+        // Fetch working hours config from database
+        const workingHoursConfig = await fetchWorkingHoursConfig(supabase, clinicId, dayOfWeek);
+
+        let isOpen: boolean;
+        let startHour: number;
+        let endHour: number;
+
+        if (workingHoursConfig) {
+            // Use database configuration
+            isOpen = workingHoursConfig.is_open;
+            startHour = parseTimeToHour(workingHoursConfig.open_time);
+            endHour = parseTimeToHour(workingHoursConfig.close_time);
+            console.log(`[Availability] Using DB config for day ${dayOfWeek}: open=${isOpen}, ${startHour}:00-${endHour}:00`);
+        } else {
+            // Fall back to defaults (Mon-Fri, 9-18)
+            isOpen = DEFAULT_OPEN_DAYS.includes(dayOfWeek);
+            startHour = DEFAULT_START_HOUR;
+            endHour = DEFAULT_END_HOUR;
+            console.log(`[Availability] Using defaults for day ${dayOfWeek}: open=${isOpen}, ${startHour}:00-${endHour}:00`);
+        }
+
+        // If clinic is closed on this day, return empty slots
+        if (!isOpen) {
+            console.log(`[Availability] Date ${date} is closed (Day ${dayOfWeek}). Returning empty slots.`);
             return new Response(
                 JSON.stringify({ slots: [] }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
         }
-
-        // Initialize Supabase client
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
 
         // Fetch bookings from database
         // Include status and slot_lock_expires_at to filter out active locks
@@ -260,7 +329,7 @@ Deno.serve(async (req) => {
         const gCalEvents = await fetchGoogleCalendarEvents(date);
 
         // Generate all slots
-        const allSlots = generateSlots(date);
+        const allSlots = generateSlots(date, startHour, endHour);
 
         // Filter availability
         const availableSlots: TimeSlot[] = allSlots.map((slot) => {

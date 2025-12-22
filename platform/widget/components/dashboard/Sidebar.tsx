@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Clock } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 
 interface NavItem {
@@ -18,6 +18,7 @@ const Sidebar: React.FC = () => {
     const navItems: NavItem[] = [
         { icon: Home, label: 'Pārskats', path: '/dashboard', end: true },
         { icon: Calendar, label: 'Kalendārs', path: '/dashboard/calendar' },
+        { icon: Clock, label: 'Grafiks', path: '/dashboard/schedule' },
         { icon: Stethoscope, label: 'Pakalpojumi', path: '/dashboard/services', adminOnly: true },
         { icon: Users, label: 'Speciālisti', path: '/dashboard/specialists', adminOnly: true },
     ];
