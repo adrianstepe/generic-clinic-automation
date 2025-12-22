@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, CheckCircle, XCircle, Clock, Calendar, Copy, UserPlus, Check, X, AlertCircle, Pencil } from 'lucide-react';
+import { Search, Filter, CheckCircle, XCircle, Clock, Calendar, Copy, UserPlus, Check, X, AlertCircle, Pencil, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { lv } from 'date-fns/locale';
 
@@ -56,11 +56,12 @@ interface AppointmentListProps {
     error?: string | null;
     onUpdateStatus: (id: string, status: string) => void;
     onEditBooking?: (booking: Booking) => void;
+    onAddBooking?: () => void;
 }
 
 type DateFilterType = 'today' | 'tomorrow' | 'all' | 'custom';
 
-const AppointmentList: React.FC<AppointmentListProps> = ({ bookings, loading, error, onUpdateStatus, onEditBooking }) => {
+const AppointmentList: React.FC<AppointmentListProps> = ({ bookings, loading, error, onUpdateStatus, onEditBooking, onAddBooking }) => {
     const [filter, setFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState<DateFilterType>('today');
     const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -96,8 +97,10 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ bookings, loading, er
             matchesDate = bookingDateStr === tomorrowStr;
         } else if (dateFilter === 'custom') {
             matchesDate = bookingDateStr === customDate;
+        } else if (dateFilter === 'all') {
+            // For 'all' (renamed to Aktuālie), show only future/today bookings to avoid clutter
+            matchesDate = bookingDateStr >= todayStr;
         }
-        // 'all' allows any date
 
         return matchesStatus && matchesSearch && matchesDate;
     });
@@ -131,7 +134,18 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ bookings, loading, er
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
             <div className="p-5 border-b border-gray-100 dark:border-slate-700 flex flex-col gap-4 bg-white dark:bg-slate-800 sticky top-0 z-10">
                 <div className="flex justify-between items-center">
-                    <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">Pierakstu pieprasījumi</h3>
+                    <div className="flex items-center gap-3">
+                        <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">Pierakstu pieprasījumi</h3>
+                        {onAddBooking && (
+                            <button
+                                onClick={onAddBooking}
+                                className="p-1.5 bg-teal-100 text-teal-700 hover:bg-teal-200 rounded-lg transition-colors"
+                                title="Pievienot pierakstu"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        )}
+                    </div>
                     <div className="flex bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
                         <button
                             onClick={() => setDateFilter('today')}
@@ -149,7 +163,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ bookings, loading, er
                             onClick={() => setDateFilter('all')}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${dateFilter === 'all' ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                         >
-                            Visi
+                            Aktuālie
                         </button>
                     </div>
                 </div>

@@ -18,6 +18,8 @@ const DashboardHome: React.FC = () => {
 
     // State for edit modal
     const [editingBooking, setEditingBooking] = useState<DashboardBooking | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const { profile } = useUser();
 
     const updateStatus = async (id: string, newStatus: string) => {
         const { error } = await supabase
@@ -32,24 +34,62 @@ const DashboardHome: React.FC = () => {
         }
     };
 
-    const updateBooking = async (id: string, updates: BookingUpdates) => {
+    const createBooking = async (updates: BookingUpdates) => {
+        if (!profile?.clinic_id) {
+            alert('Kļūda: Nav atrasta klīnika');
+            return;
+        }
+
         const { error } = await supabase
             .from('bookings')
-            .update({
+            .insert({
                 start_time: updates.start_time,
                 end_time: updates.end_time,
                 service_id: updates.service_id,
                 service_name: updates.service_name,
                 customer_phone: updates.customer_phone,
-                notes: updates.notes
-            })
-            .eq('id', id);
+                customer_name: updates.customer_name,
+                customer_email: updates.customer_email,
+                notes: updates.notes,
+                status: 'confirmed', // Admin created bookings are confirmed by default
+                clinic_id: profile.clinic_id,
+                business_id: 'BUTKEVICA_DENTAL', // Fallback or strict? Ideally matching profile
+                created_at: new Date().toISOString()
+            });
 
         if (error) {
-            console.error('Error updating booking:', error);
+            console.error('Error creating booking:', error);
             throw error;
         }
         refresh();
+    };
+
+    const handleSaveBooking = async (updates: BookingUpdates, id?: string) => {
+        if (id) {
+            // Update existing
+            const { error } = await supabase
+                .from('bookings')
+                .update({
+                    start_time: updates.start_time,
+                    end_time: updates.end_time,
+                    service_id: updates.service_id,
+                    service_name: updates.service_name,
+                    customer_phone: updates.customer_phone,
+                    customer_name: updates.customer_name,
+                    customer_email: updates.customer_email,
+                    notes: updates.notes
+                })
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error updating booking:', error);
+                throw error;
+            }
+            refresh();
+        } else {
+            // Create new
+            await createBooking(updates);
+        }
     };
 
     const handleEditBooking = (booking: DashboardBooking) => {
@@ -136,6 +176,7 @@ const DashboardHome: React.FC = () => {
                             error={error}
                             onUpdateStatus={updateStatus}
                             onEditBooking={handleEditBooking}
+                            onAddBooking={() => setIsCreateModalOpen(true)}
                         />
                     </div>
                     <div className="col-span-12 lg:col-span-5 h-full">
@@ -149,7 +190,16 @@ const DashboardHome: React.FC = () => {
                 <EditBookingModal
                     booking={editingBooking}
                     onClose={() => setEditingBooking(null)}
-                    onSave={updateBooking}
+                    onSave={handleSaveBooking}
+                />
+            )}
+
+            {/* Create Booking Modal */}
+            {isCreateModalOpen && (
+                <EditBookingModal
+                    isOpen={isCreateModalOpen} // Actually we just mount it if open, but prop helps if we change logic
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSave={handleSaveBooking}
                 />
             )}
         </div>

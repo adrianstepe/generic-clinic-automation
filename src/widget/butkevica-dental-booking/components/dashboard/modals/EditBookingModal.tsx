@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, Phone, FileText, Save, Loader2 } from 'lucide-react';
 import { format, parseISO, addMinutes } from 'date-fns';
 import { supabase } from '../../../supabaseClient';
+import { useUser } from '../../../contexts/UserContext'; // Import user context
 
 interface Service {
     id: string;
@@ -13,7 +14,7 @@ interface Service {
 }
 
 interface EditBookingModalProps {
-    booking: {
+    booking?: {
         id: string;
         customer_name: string;
         customer_email: string;
@@ -26,7 +27,7 @@ interface EditBookingModalProps {
         status: string;
     } | null;
     onClose: () => void;
-    onSave: (id: string, updates: BookingUpdates) => Promise<void>;
+    onSave: (updates: BookingUpdates, id?: string) => Promise<void>;
 }
 
 export interface BookingUpdates {
@@ -35,6 +36,8 @@ export interface BookingUpdates {
     service_id: string;
     service_name: string;
     customer_phone: string;
+    customer_name: string;
+    customer_email: string;
     notes: string;
 }
 
@@ -47,6 +50,10 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [selectedServiceId, setSelectedServiceId] = useState('');
+
+    // Customer details
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [notes, setNotes] = useState('');
 
@@ -57,25 +64,47 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
         '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
     ];
 
+    const { profile } = useUser();
+
     useEffect(() => {
         if (booking) {
             const date = parseISO(booking.start_time);
             setSelectedDate(format(date, 'yyyy-MM-dd'));
             setSelectedTime(format(date, 'HH:mm'));
             setSelectedServiceId(booking.service_id || '');
+            setName(booking.customer_name || '');
+            setEmail(booking.customer_email || '');
             setPhone(booking.customer_phone || '');
             setNotes(booking.notes || '');
+        } else {
+            // Defaults for new booking
+            setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
+            setSelectedTime('09:00');
+            setSelectedServiceId('');
+            setName('');
+            setEmail('');
+            setPhone('');
+            setNotes('');
         }
-        fetchServices();
     }, [booking]);
 
+    // Fetch services when profile is available
+    useEffect(() => {
+        if (profile?.clinic_id) {
+            fetchServices();
+        }
+    }, [profile?.clinic_id]);
+
     const fetchServices = async () => {
+        if (!profile?.clinic_id) return;
+
         setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('clinic_services')
                 .select('id, name_en, name_lv, name_ru, duration_minutes, price_cents')
                 .eq('is_active', true)
+                .eq('business_id', profile.clinic_id)
                 .order('display_order');
 
             if (error) throw error;
@@ -88,7 +117,10 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
     };
 
     const handleSave = async () => {
-        if (!booking || !selectedDate || !selectedTime || !selectedServiceId) return;
+        if (!selectedDate || !selectedTime || !selectedServiceId || !name || !email) {
+            alert('Lūdzu aizpildiet visus obligātos laukus');
+            return;
+        }
 
         setSaving(true);
         try {
@@ -98,14 +130,18 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
             const startTime = new Date(`${selectedDate}T${selectedTime}:00`);
             const endTime = addMinutes(startTime, duration);
 
-            await onSave(booking.id, {
+            const updates: BookingUpdates = {
                 start_time: startTime.toISOString(),
                 end_time: endTime.toISOString(),
                 service_id: selectedServiceId,
                 service_name: selectedService?.name_lv || selectedService?.name_en || '',
+                customer_name: name,
+                customer_email: email,
                 customer_phone: phone,
                 notes: notes
-            });
+            };
+
+            await onSave(updates, booking?.id);
 
             onClose();
         } catch (err) {
@@ -116,16 +152,16 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
         }
     };
 
-    if (!booking) return null;
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex justify-between items-start">
                     <div>
-                        <h3 className="text-xl font-bold text-slate-800">Rediģēt pierakstu</h3>
-                        <p className="text-sm text-slate-500">{booking.customer_name}</p>
+                        <h3 className="text-xl font-bold text-slate-800">
+                            {booking ? 'Rediģēt pierakstu' : 'Jauns pieraksts'}
+                        </h3>
+                        {booking && <p className="text-sm text-slate-500">{booking.customer_name}</p>}
                     </div>
                     <button
                         onClick={onClose}
@@ -142,7 +178,7 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
                         <div>
                             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                                 <Calendar size={16} className="text-slate-400" />
-                                Datums
+                                Datums <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="date"
@@ -155,7 +191,7 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
                         <div>
                             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                                 <Clock size={16} className="text-slate-400" />
-                                Laiks
+                                Laiks <span className="text-red-500">*</span>
                             </label>
                             <select
                                 value={selectedTime}
@@ -169,11 +205,39 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
                         </div>
                     </div>
 
+                    {/* Patient Name & Email */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                                Pacienta vārds <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Jānis Bērziņš"
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                                E-pasts <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="janis@example.com"
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                            />
+                        </div>
+                    </div>
+
                     {/* Service */}
                     <div>
                         <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                             <FileText size={16} className="text-slate-400" />
-                            Pakalpojums
+                            Pakalpojums <span className="text-red-500">*</span>
                         </label>
                         {loading ? (
                             <div className="flex items-center justify-center py-4">
@@ -236,7 +300,7 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={saving || !selectedDate || !selectedTime || !selectedServiceId}
+                        disabled={saving || !selectedDate || !selectedTime || !selectedServiceId || !name || !email}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-colors shadow-sm shadow-teal-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {saving ? (
@@ -247,7 +311,7 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
                         ) : (
                             <>
                                 <Save size={18} />
-                                Saglabāt
+                                {booking ? 'Saglabāt' : 'Izveidot'}
                             </>
                         )}
                     </button>
