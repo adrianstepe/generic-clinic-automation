@@ -6,9 +6,7 @@ import { useUser } from '../../../contexts/UserContext'; // Import user context
 
 interface Service {
     id: string;
-    name_en: string;
-    name_lv: string;
-    name_ru?: string;
+    name: any; // JSONB
     duration_minutes: number;
     price_cents: number;
 }
@@ -100,14 +98,16 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
 
         setLoading(true);
         try {
+            console.log('Fetching services for clinic:', profile.clinic_id);
             const { data, error } = await supabase
-                .from('clinic_services')
-                .select('id, name_en, name_lv, name_ru, duration_minutes, price_cents')
+                .from('services')
+                .select('id, name, duration_minutes, price_cents')
                 .eq('is_active', true)
-                .eq('business_id', profile.clinic_id)
+                .eq('clinic_id', profile.clinic_id)
                 .order('display_order');
 
             if (error) throw error;
+            console.log('Services fetched:', data);
             setServices(data || []);
         } catch (err) {
             console.error('Error fetching services:', err);
@@ -134,7 +134,7 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
                 start_time: startTime.toISOString(),
                 end_time: endTime.toISOString(),
                 service_id: selectedServiceId,
-                service_name: selectedService?.name_lv || selectedService?.name_en || '',
+                service_name: selectedService?.name?.lv || selectedService?.name?.en || '',
                 customer_name: name,
                 customer_email: email,
                 customer_phone: phone,
@@ -252,7 +252,7 @@ const EditBookingModal: React.FC<EditBookingModalProps> = ({ booking, onClose, o
                                 <option value="">Izvēlieties pakalpojumu</option>
                                 {services.map(service => (
                                     <option key={service.id} value={service.id}>
-                                        {service.name_lv || service.name_en} — €{(service.price_cents / 100).toFixed(0)} ({service.duration_minutes} min)
+                                        {service.name?.lv || service.name?.en || 'Unknown'} — €{(service.price_cents / 100).toFixed(0)} ({service.duration_minutes} min)
                                     </option>
                                 ))}
                             </select>
