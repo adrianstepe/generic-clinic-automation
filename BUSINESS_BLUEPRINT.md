@@ -816,3 +816,88 @@ n8n: Uses metadata.clinic_email for confirmation emails
 4. Optional: Select template clinic to copy services
 5. Click "Create Clinic"
 6. Follow deployment instructions for Cloudflare Pages
+
+### 6.17 RLS Performance & Security Fixes (Updated 2025-12-23)
+
+**Problem Solved:** Supabase performance advisor flagged multiple issues:
+- `auth_rls_initplan` warnings (inefficient `auth.uid()` calls in RLS)
+- `multiple_permissive_policies` causing policy conflicts
+- `Function Search Path Mutable` security warning
+
+**Fixes Applied:**
+| Fix | Before | After |
+|-----|--------|-------|
+| Auth function wrapping | `auth.uid()` | `(SELECT auth.uid())` (subquery optimization) |
+| Policy consolidation | Multiple permissive policies per table | Single comprehensive policy per operation |
+| Function security | Mutable search path | `SET search_path = ''` on all RPC functions |
+
+**Files Changed:**
+| File | Purpose |
+|------|---------|
+| `sql/10_fix_rls_performance.sql` | RLS policy optimization |
+| `sql/11_fix_remaining_rls_issues.sql` | Additional policy fixes |
+| `sql/09_fix_search_path.sql` | Updated `reserve_slot` and `confirm_booking` with fixed search path |
+
+**Verification:**
+- ✅ Supabase performance advisor warnings resolved
+- ✅ RLS policies correctly isolate clinic data
+- ✅ No authenticated bypass vulnerabilities
+
+### 6.18 Multi-Specialist Capacity Scheduling (Updated 2025-12-24)
+
+**Problem Solved:** When 2+ specialists could perform the same service, booking one would mark the entire time slot as unavailable. This prevented optimal resource utilization.
+
+**Example Before (Broken):**
+```
+Service "Zobu ārstēšana" → Dr. A and Dr. B both qualified
+Patient 1 books 10:00 → assigned to Dr. A
+Patient 2 tries 10:00 → ❌ "Slot unavailable" (wrong!)
+```
+
+**Example After (Fixed):**
+```
+Patient 1 books 10:00 → assigned to Dr. A
+Patient 2 books 10:00 → ✅ Slot still available → assigned to Dr. B
+Patient 3 tries 10:00 → ❌ "Slot unavailable" (correct - both doctors booked)
+```
+
+**Technical Solution:**
+1. **Capacity Check:** Count qualified specialists for the selected service
+2. **Booking Count:** Count existing bookings at the requested time
+3. **Availability Rule:** `slot_available = (bookings < qualified_specialists)`
+
+**Files Changed:**
+| File | Change |
+|------|--------|
+| `supabase/functions/check-availability/index.ts` | Fetches qualified specialists, compares to booking count |
+| `sql/12_multi_specialist_capacity.sql` | Updated `reserve_slot` RPC with capacity logic |
+| `services/api.ts` | Added `service_id` parameter to availability functions |
+| `components/SpecialistSelection.tsx` | Passes `service_id` for accurate capacity check |
+
+**Deployment:**
+1. Run `sql/12_multi_specialist_capacity.sql` in Supabase SQL Editor
+2. Deploy Edge Function: `supabase functions deploy check-availability`
+
+**n8n Workflow Improvements (2025-12-24):**
+| Fix | Description |
+|-----|-------------|
+| Update Pending Booking | Changed from `rowId` to `filterString` syntax (fixes "select condition" error) |
+| Specialist Auto-Assignment | Added `Fetch Qualified Specialists` + random selection node |
+| Deduplication | Added `Check Existing Booking` before INSERT (prevents duplicate key errors) |
+| Timestamp Fix | Removed empty string for `slot_lock_expires_at` (caused PostgreSQL error) |
+
+**Workflow File:** `workflows/n8n-2-stripe-confirmation-supabase.json`
+
+**Flow Structure:**
+```
+Webhook → Filter Event → Extract Data → Fetch Specialists → Auto-Assign
+                                                               ↓
+                                                    Has Pending Booking?
+                                            ┌──────────────┴──────────────┐
+                                          [YES]                          [NO]
+                                            ↓                              ↓
+                                   Update Pending             Check Duplicate → Create
+                                            ↓                              ↓
+                                   Email + Calendar            Email + Calendar
+```
+
