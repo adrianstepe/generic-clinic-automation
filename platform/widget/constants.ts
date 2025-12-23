@@ -98,7 +98,7 @@ export const SPECIALISTS: Specialist[] = [
         id: 'd1',
         name: 'Dr. Anna Bērziņa',
         role: { [Language.EN]: 'Lead Surgeon', [Language.LV]: 'Galvenā ķirurģe', [Language.RU]: 'Главный хирург' },
-        photoUrl: 'https://picsum.photos/100/100?random=1',
+        photoUrl: '',
         // Surgery, Implants, Bone Restoration, Prosthetics
         specialties: ['s7', 's9', 's10', 's8']
     },
@@ -106,7 +106,7 @@ export const SPECIALISTS: Specialist[] = [
         id: 'd2',
         name: 'Dr. Jānis Liepiņš',
         role: { [Language.EN]: 'General Dentist', [Language.LV]: 'Vispārējais zobārsts', [Language.RU]: 'Стоматолог общей практики' },
-        photoUrl: 'https://picsum.photos/100/100?random=2',
+        photoUrl: '',
         // Integrated Test, Hygiene, Treatment, Whitening, Prosthetics
         specialties: ['s1', 's2', 's4', 's6', 's8']
     },
@@ -114,7 +114,7 @@ export const SPECIALISTS: Specialist[] = [
         id: 'd3',
         name: 'Dr. Elena Petrova',
         role: { [Language.EN]: 'Pediatric Dentist', [Language.LV]: 'Bērnu zobārste', [Language.RU]: 'Детский стоматолог' },
-        photoUrl: 'https://picsum.photos/100/100?random=3',
+        photoUrl: '',
         // Children, Treatment, Sedation
         specialties: ['s3', 's4', 's5']
     }

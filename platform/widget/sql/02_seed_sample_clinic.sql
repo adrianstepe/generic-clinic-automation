@@ -60,17 +60,17 @@ INSERT INTO specialists (id, clinic_id, name, role, photo_url, specialties)
 VALUES
   ('butkevica_d1', 'butkevica', 'Dr. Anna Bērziņa',
    '{"en": "Lead Surgeon", "lv": "Galvenā ķirurģe", "ru": "Главный хирург"}',
-   'https://picsum.photos/100/100?random=1',
+   '',
    ARRAY['butkevica_s7', 'butkevica_s9', 'butkevica_s10', 'butkevica_s8']),
 
   ('butkevica_d2', 'butkevica', 'Dr. Jānis Liepiņš',
    '{"en": "General Dentist", "lv": "Vispārējais zobārsts", "ru": "Стоматолог общей практики"}',
-   'https://picsum.photos/100/100?random=2',
+   '',
    ARRAY['butkevica_s1', 'butkevica_s2', 'butkevica_s4', 'butkevica_s6', 'butkevica_s8']),
 
   ('butkevica_d3', 'butkevica', 'Dr. Elena Petrova',
    '{"en": "Pediatric Dentist", "lv": "Bērnu zobārste", "ru": "Детский стоматолог"}',
-   'https://picsum.photos/100/100?random=3',
+   '',
    ARRAY['butkevica_s3', 'butkevica_s4', 'butkevica_s5'])
 ON CONFLICT (id) DO NOTHING;
 

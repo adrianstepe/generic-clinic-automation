@@ -73,8 +73,9 @@ BEGIN
     WHERE b.clinic_id = p_clinic_id
       AND (b.start_time < p_end_time AND b.end_time > p_start_time)
       AND (
-          b.status IN ('confirmed', 'completed', 'pending')
-          OR (b.slot_lock_expires_at IS NOT NULL AND b.slot_lock_expires_at > NOW())
+          b.status IN ('confirmed', 'completed')
+          OR (b.status = 'pending' AND b.slot_lock_expires_at IS NOT NULL 
+              AND b.slot_lock_expires_at > NOW())
       )
       AND (
           -- Either specialist is qualified for this service

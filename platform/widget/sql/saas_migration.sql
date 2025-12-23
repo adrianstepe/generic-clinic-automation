@@ -106,9 +106,9 @@ CREATE TABLE IF NOT EXISTS public.clinic_specialists (
 -- Seed data from current constants.ts
 INSERT INTO public.clinic_specialists (id, name, role_en, role_lv, role_ru, photo_url, specialty_ids, display_order)
 VALUES
-    ('d1', 'Dr. Anna Bērziņa', 'Lead Surgeon', 'Galvenā ķirurģe', 'Главный хирург', 'https://picsum.photos/100/100?random=1', ARRAY['s7', 's9', 's10', 's8'], 1),
-    ('d2', 'Dr. Jānis Liepiņš', 'General Dentist', 'Vispārējais zobārsts', 'Стоматолог общей практики', 'https://picsum.photos/100/100?random=2', ARRAY['s1', 's2', 's4', 's6', 's8'], 2),
-    ('d3', 'Dr. Elena Petrova', 'Pediatric Dentist', 'Bērnu zobārste', 'Детский стоматолог', 'https://picsum.photos/100/100?random=3', ARRAY['s3', 's4', 's5'], 3)
+    ('d1', 'Dr. Anna Bērziņa', 'Lead Surgeon', 'Galvenā ķirurģe', 'Главный хирург', NULL, ARRAY['s7', 's9', 's10', 's8'], 1),
+    ('d2', 'Dr. Jānis Liepiņš', 'General Dentist', 'Vispārējais zobārsts', 'Стоматолог общей практики', NULL, ARRAY['s1', 's2', 's4', 's6', 's8'], 2),
+    ('d3', 'Dr. Elena Petrova', 'Pediatric Dentist', 'Bērnu zobārste', 'Детский стоматолог', NULL, ARRAY['s3', 's4', 's5'], 3)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     role_en = EXCLUDED.role_en,
