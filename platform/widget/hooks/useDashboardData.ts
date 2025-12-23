@@ -72,7 +72,7 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
                 .from('profiles')
                 .select('role, full_name, clinic_id, specialist_id')
                 .eq('id', user.id)
-                .maybeSingle();
+                .single();
 
             console.log('[Dashboard] User Profile:', profile, 'Profile Error:', profileError);
 
