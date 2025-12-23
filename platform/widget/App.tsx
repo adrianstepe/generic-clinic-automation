@@ -34,7 +34,9 @@ const getClinicId = () => {
         if (!hostname.includes('localhost') && !hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
             const parts = hostname.split('.');
             if (parts.length > 2) {
-                return parts[0];
+                // Strip -test, -dev, -staging suffixes to match DB ID
+                // e.g. nordic-smile-test -> nordic-smile
+                return parts[0].replace(/-test$/, '').replace(/-dev$/, '').replace(/-staging$/, '');
             }
         }
     }
