@@ -19,8 +19,32 @@ import SuperAdminDashboard from './components/super-admin/SuperAdminDashboard';
 import ClinicsPage from './components/super-admin/ClinicsPage';
 import WorkingHoursPage from './components/super-admin/WorkingHoursPage';
 
-// Clinic ID is set via environment variable (VITE_CLINIC_ID) or defaults to 'sample'
-const CLINIC_ID = import.meta.env.VITE_CLINIC_ID || 'sample';
+// Helper to determine Clinic ID from environment or subdomain
+const getClinicId = () => {
+    // 1. Environment variable (Build time / Dev override)
+    if (import.meta.env.VITE_CLINIC_ID) {
+        return import.meta.env.VITE_CLINIC_ID;
+    }
+
+    // 2. Subdomain (Runtime SaaS)
+    // e.g. nordic-smile.pages.dev -> nordic-smile
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        // Ignore localhost and IP addresses
+        if (!hostname.includes('localhost') && !hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+            const parts = hostname.split('.');
+            if (parts.length > 2) {
+                return parts[0];
+            }
+        }
+    }
+
+    // 3. Fallback default
+    return 'sample';
+};
+
+const CLINIC_ID = getClinicId();
+console.log('[App] Initialized with Clinic ID:', CLINIC_ID);
 
 function App() {
     return (

@@ -1,7 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const { createClient } = require('@supabase/supabase-js');
-const dotenv = require('dotenv');
-const path = require('path');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load env vars
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -17,23 +20,30 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkData() {
-    console.log('--- Checking Clinic Services ---');
-    const { data: services, error: servicesError } = await supabase
-        .from('clinic_services')
-        .select('id, name_lv, business_id, is_active')
-        .limit(10);
+    console.log('--- Checking Clinics ---');
+    const { data: clinics, error: clinicsError } = await supabase
+        .from('clinics')
+        .select('*');
 
-    if (servicesError) console.error('Error fetching services:', servicesError);
-    else console.table(services);
+    if (clinicsError) console.error('Error fetching clinics:', clinicsError);
+    else console.table(clinics);
 
-    console.log('\n--- Checking Profiles (Mock User) ---');
-    const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, role, clinic_id')
-        .eq('email', 'adrians.stepe@gmail.com');
+    console.log('\n--- Checking Clinic Working Hours ---');
+    const { data: hours, error: hoursError } = await supabase
+        .from('clinic_working_hours')
+        .select('*')
+        .order('clinic_id')
+        .order('day_of_week');
 
-    if (profilesError) console.error('Error fetching profile:', profilesError);
-    else console.table(profiles);
+    if (hoursError) console.error('Error fetching working hours:', hoursError);
+    else {
+        console.table(hours.map(h => ({
+            clinic_id: h.clinic_id,
+            day: h.day_of_week,
+            open: h.is_open,
+            time: `${h.open_time}-${h.close_time}`
+        })));
+    }
 }
 
 checkData();
