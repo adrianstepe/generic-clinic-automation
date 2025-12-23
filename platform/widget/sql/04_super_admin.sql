@@ -34,7 +34,7 @@ USING (
 -- TODO: Replace with your actual email address
 
 INSERT INTO public.super_admin_whitelist (email, added_by) VALUES
-    ('admin@example.com', 'system')  -- <-- CHANGE THIS TO YOUR EMAIL
+    ('adrians.stepe@gmail.com', 'system')  -- <-- CHANGE THIS TO YOUR EMAIL
 ON CONFLICT (email) DO NOTHING;
 
 -- ===========================================

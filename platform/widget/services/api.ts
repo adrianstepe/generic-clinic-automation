@@ -34,7 +34,7 @@ export const checkAvailability = async (date: string, clinicId: string): Promise
         try {
             const url = new URL(edgeFunctionUrl);
             url.searchParams.set('date', date);
-            url.searchParams.set('clinicId', clinicId);
+            url.searchParams.set('clinic_id', clinicId);
 
             console.log('[Availability] Trying Supabase Edge Function...');
             const response = await fetch(url.toString(), {
@@ -64,7 +64,7 @@ export const checkAvailability = async (date: string, clinicId: string): Promise
             console.log('[Availability] Falling back to n8n...');
             const url = new URL(n8nUrl);
             url.searchParams.set('date', date);
-            url.searchParams.set('clinicId', clinicId);
+            url.searchParams.set('clinic_id', clinicId);
 
             const response = await fetch(url.toString(), {
                 method: 'GET',

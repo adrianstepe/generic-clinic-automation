@@ -121,22 +121,75 @@ const WorkingHoursPage: React.FC = () => {
         setMessage(null);
 
         try {
-            // Upsert all days
-            for (const day of workingHours) {
-                const { error } = await supabase
-                    .from('clinic_working_hours')
-                    .upsert({
-                        clinic_id: selectedClinicId,
-                        day_of_week: day.day_of_week,
-                        is_open: day.is_open,
-                        open_time: day.open_time,
-                        close_time: day.close_time,
-                        updated_at: new Date().toISOString(),
-                    }, {
-                        onConflict: 'clinic_id,day_of_week'
-                    });
+            console.log('[WorkingHoursPage] Saving working hours for clinic:', selectedClinicId);
+            console.log('[WorkingHoursPage] Data to save:', workingHours);
 
-                if (error) throw error;
+            // Prepare batch upsert data
+            const upsertData = workingHours.map(day => ({
+                clinic_id: selectedClinicId,
+                day_of_week: day.day_of_week,
+                is_open: day.is_open,
+                open_time: day.open_time,
+                close_time: day.close_time,
+                updated_at: new Date().toISOString(),
+            }));
+
+            // Perform batch upsert
+            const { data, error, count } = await supabase
+                .from('clinic_working_hours')
+                .upsert(upsertData, {
+                    onConflict: 'clinic_id,day_of_week',
+                    ignoreDuplicates: false
+                })
+                .select();
+
+            console.log('[WorkingHoursPage] Upsert response:', { data, error, count });
+
+            if (error) {
+                console.error('[WorkingHoursPage] Upsert error:', error);
+                throw error;
+            }
+
+            // Verify the save actually worked by re-fetching
+            const { data: verifyData, error: verifyError } = await supabase
+                .from('clinic_working_hours')
+                .select('day_of_week, is_open, open_time, close_time')
+                .eq('clinic_id', selectedClinicId)
+                .order('day_of_week');
+
+            if (verifyError) {
+                console.error('[WorkingHoursPage] Verification query error:', verifyError);
+                throw new Error('Failed to verify save - please check database permissions');
+            }
+
+            console.log('[WorkingHoursPage] Verified data in DB:', verifyData);
+
+            // Check if the data matches what we tried to save
+            let allMatch = true;
+            for (const day of workingHours) {
+                const dbDay = verifyData?.find(d => d.day_of_week === day.day_of_week);
+                if (!dbDay) {
+                    console.error(`[WorkingHoursPage] Day ${day.day_of_week} not found in DB!`);
+                    allMatch = false;
+                    continue;
+                }
+
+                const dbOpenTime = dbDay.open_time?.substring(0, 5) || '';
+                const dbCloseTime = dbDay.close_time?.substring(0, 5) || '';
+
+                if (dbDay.is_open !== day.is_open ||
+                    dbOpenTime !== day.open_time ||
+                    dbCloseTime !== day.close_time) {
+                    console.error(`[WorkingHoursPage] Day ${day.day_of_week} mismatch!`, {
+                        expected: day,
+                        actual: { is_open: dbDay.is_open, open_time: dbOpenTime, close_time: dbCloseTime }
+                    });
+                    allMatch = false;
+                }
+            }
+
+            if (!allMatch) {
+                throw new Error('Save appeared to succeed but data did not update. This may be a permissions issue - check RLS policies.');
             }
 
             setMessage({ type: 'success', text: 'Working hours saved successfully!' });
