@@ -251,10 +251,6 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ bookings, loading, er
                                 <Copy size={16} />
                                 Kopēt saiti
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors shadow-sm shadow-teal-200">
-                                <UserPlus size={16} />
-                                Pievienot iebraucēju
-                            </button>
                         </div>
                     </div>
                 ) : (
