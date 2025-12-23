@@ -239,13 +239,11 @@ const SpecialistsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {specialists.map((specialist) => (
                     <div key={specialist.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 flex flex-col items-center text-center">
-                        <div className="w-24 h-24 rounded-full overflow-hidden mb-4 bg-gray-100 dark:bg-slate-700">
-                            {specialist.photoUrl ? (
+                        {specialist.photoUrl && (
+                            <div className="w-24 h-24 rounded-full overflow-hidden mb-4">
                                 <img src={specialist.photoUrl} alt={specialist.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-slate-500">Nav foto</div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">{specialist.name}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{specialist.role.LV || specialist.role.EN}</p>
 

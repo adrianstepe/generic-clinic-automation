@@ -236,7 +236,9 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
                 : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800'
                 } `}
             >
-              <img src={spec.photoUrl} alt={spec.name} className="w-16 h-16 rounded-full object-cover mb-2 border border-gray-100 dark:border-slate-600" />
+              {spec.photoUrl && (
+                <img src={spec.photoUrl} alt={spec.name} className="w-16 h-16 rounded-full object-cover mb-2 border border-gray-100 dark:border-slate-600" />
+              )}
               <span className="text-sm font-bold text-gray-800 dark:text-gray-100 text-center">{spec.name}</span>
               <span className="text-xs text-gray-500 dark:text-gray-400 text-center">{spec.role[language]}</span>
             </button>
