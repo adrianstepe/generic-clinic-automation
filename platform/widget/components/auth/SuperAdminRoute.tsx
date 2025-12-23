@@ -33,7 +33,7 @@ const SuperAdminRoute: React.FC<SuperAdminRouteProps> = ({ children }) => {
                     .select('email, is_active')
                     .eq('email', user.email)
                     .eq('is_active', true)
-                    .single();
+                    .maybeSingle();
 
                 if (error || !data) {
                     console.log('[SuperAdminRoute] User is not a super admin:', user.email);

@@ -32,7 +32,7 @@ const AdminDashboard: React.FC = () => {
                     .from('profiles')
                     .select('role')
                     .eq('id', user.id)
-                    .single();
+                    .maybeSingle();
                 console.log("User Profile Role:", profile?.role);
             }
 

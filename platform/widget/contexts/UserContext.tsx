@@ -53,7 +53,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .from('profiles')
                 .select('*')
                 .eq('id', userId)
-                .single();
+                .maybeSingle();
 
             if (error) {
                 console.error('Error fetching profile:', error);
@@ -64,6 +64,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     ...data,
                     email: email || '' // Ensure email is present if not in profile table
                 });
+            } else {
+                // No profile found - user exists but doesn't have a profile entry yet
+                // This is normal for super admins or newly registered users
+                setProfile(null);
             }
         } catch (error) {
             console.error('Unexpected error fetching profile:', error);
