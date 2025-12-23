@@ -120,7 +120,7 @@ export async function onRequestPost(context) {
         }
 
         const body = await request.json();
-        const { start_time, end_time, customer_email, customer_name, service_id, service_name, cf_turnstile_token } = body;
+        const { start_time, end_time, customer_email, customer_name, customer_phone, service_id, service_name, cf_turnstile_token } = body;
 
         // Validate required fields
         if (!start_time || !end_time || !customer_email) {
@@ -189,6 +189,7 @@ export async function onRequestPost(context) {
                 p_end_time: end_time,
                 p_customer_email: customer_email,
                 p_customer_name: customer_name || null,
+                p_customer_phone: customer_phone || null, // Pass phone number
                 p_service_id: service_id || null,
                 p_service_name: service_name || null,
                 p_clinic_id: body.clinic_id, // SaaS: Pass clinic_id to scope the lock

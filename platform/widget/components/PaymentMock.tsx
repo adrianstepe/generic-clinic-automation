@@ -26,6 +26,7 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetId = useRef<string | null>(null); // Track widget to prevent duplicate renders
   const depositAmount = 30; // Fixed deposit
   const remainingBalance = service.price - depositAmount;
 
@@ -46,22 +47,54 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
       script.onload = () => renderTurnstile();
       document.head.appendChild(script);
     } else {
-      renderTurnstile();
+      // Small delay to ensure DOM is ready when script is already loaded
+      setTimeout(() => renderTurnstile(), 100);
     }
 
     function renderTurnstile() {
+      // Prevent duplicate renders - check if widget already exists
+      if (turnstileWidgetId.current !== null) {
+        console.log('[Turnstile] Widget already rendered, skipping');
+        return;
+      }
+
       if (turnstileRef.current && (window as any).turnstile) {
-        (window as any).turnstile.render(turnstileRef.current, {
-          sitekey: TURNSTILE_SITE_KEY,
-          callback: (token: string) => {
-            console.log('[Turnstile] Token received');
-            setTurnstileToken(token);
-          },
-          theme: 'light',
-          size: 'normal' // Horizontal layout like on other websites
-        });
+        // Clear any existing content in the container first
+        turnstileRef.current.innerHTML = '';
+
+        try {
+          const widgetId = (window as any).turnstile.render(turnstileRef.current, {
+            sitekey: TURNSTILE_SITE_KEY,
+            callback: (token: string) => {
+              console.log('[Turnstile] Token received');
+              setTurnstileToken(token);
+            },
+            'error-callback': (error: any) => {
+              console.error('[Turnstile] Error:', error);
+            },
+            theme: 'light',
+            size: 'normal' // Horizontal layout like on other websites
+          });
+          turnstileWidgetId.current = widgetId;
+          console.log('[Turnstile] Widget rendered with ID:', widgetId);
+        } catch (error) {
+          console.error('[Turnstile] Render error:', error);
+        }
       }
     }
+
+    // Cleanup on unmount
+    return () => {
+      if (turnstileWidgetId.current !== null && (window as any).turnstile) {
+        try {
+          (window as any).turnstile.remove(turnstileWidgetId.current);
+          console.log('[Turnstile] Widget removed');
+        } catch (error) {
+          console.error('[Turnstile] Cleanup error:', error);
+        }
+        turnstileWidgetId.current = null;
+      }
+    };
   }, []);
 
   const handlePay = async () => {
@@ -135,6 +168,7 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
               end_time: endTimeIso,
               customer_email: booking.patientData.email,
               customer_name: `${booking.patientData.firstName} ${booking.patientData.lastName}`,
+              customer_phone: booking.patientData.phone, // Pass phone number for database
               service_id: service.id,
               service_name: service.name[booking.language] || service.name[Language.EN],
               cf_turnstile_token: turnstileToken // CAPTCHA token for bot protection
@@ -391,14 +425,23 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
           ) : (
             <button
               onClick={handlePay}
-              disabled={loading}
-              className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${loading ? 'bg-gray-400 cursor-wait' : 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700'
+              disabled={loading || (TURNSTILE_SITE_KEY && !turnstileToken)}
+              className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${loading || (TURNSTILE_SITE_KEY && !turnstileToken)
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700'
                 }`}
             >
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Processing...</span>
+                </>
+              ) : (TURNSTILE_SITE_KEY && !turnstileToken) ? (
+                <>
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clipRule="evenodd" />
+                  </svg>
+                  <span>{language === 'lv' ? 'Apstipriniet, ka neesat robots' : language === 'ru' ? 'Подтвердите, что вы не робот' : 'Please verify you\'re human'}</span>
                 </>
               ) : (
                 <>
