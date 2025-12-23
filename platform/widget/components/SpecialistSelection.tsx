@@ -106,7 +106,7 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
       try {
         const startDate = dates[0].toLocaleDateString('en-CA');
         const endDate = dates[dates.length - 1].toLocaleDateString('en-CA');
-        const availability = await getWeekAvailability(startDate, endDate, clinicId);
+        const availability = await getWeekAvailability(startDate, endDate, clinicId, selectedService.id);
         setWeekAvailability(availability);
       } catch (error) {
         console.error("Failed to load week availability", error);
@@ -135,7 +135,7 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
     if (!clinicId) return;
     setFindingNext(true);
     try {
-      const result = await getFirstAvailableDate(60, clinicId);
+      const result = await getFirstAvailableDate(60, clinicId, selectedService.id);
       if (result) {
         const targetDate = new Date(result.date);
         const today = new Date();
@@ -174,7 +174,7 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
         const dateStr = selectedDate.toLocaleDateString('en-CA');
 
         // Call the service
-        const data = await checkAvailability(dateStr, clinicId);
+        const data = await checkAvailability(dateStr, clinicId, selectedService.id);
 
         if (data && data.slots) {
           setSlots(data.slots);

@@ -1,8 +1,8 @@
 // Supabase Edge Function: check-availability
-// Replaces n8n-4-check-availability.json for improved resilience
+// Multi-specialist capacity-aware version
 //
 // Deploy: supabase functions deploy check-availability
-// Test: curl "https://<project>.supabase.co/functions/v1/check-availability?date=2025-12-07"
+// Test: curl "https://<project>.supabase.co/functions/v1/check-availability?date=2025-12-07&service_id=s1"
 
 // @ts-ignore - Deno types not available in local environment
 declare const Deno: {
@@ -35,6 +35,7 @@ interface WorkingHoursConfig {
 interface TimeSlot {
     time: string;
     available: boolean;
+    available_specialists?: number; // Optional: show how many specialists are free
 }
 
 interface Booking {
@@ -42,6 +43,13 @@ interface Booking {
     end_time: string;
     status: string;
     slot_lock_expires_at: string | null;
+    specialist_id: string | null;
+}
+
+interface Specialist {
+    id: string;
+    name: string;
+    specialties: string[];
 }
 
 interface CalendarEvent {
@@ -93,7 +101,6 @@ async function fetchWorkingHoursConfig(
             .single();
 
         if (error) {
-            // No config found, return null to use defaults
             if (error.code === 'PGRST116') {
                 return null;
             }
@@ -105,6 +112,42 @@ async function fetchWorkingHoursConfig(
     } catch (error) {
         console.warn('[WorkingHours] Exception fetching config:', error);
         return null;
+    }
+}
+
+// Fetch specialists qualified for a specific service
+async function fetchQualifiedSpecialists(
+    supabase: any,
+    clinicId: string,
+    serviceId: string | null
+): Promise<Specialist[]> {
+    try {
+        let query = supabase
+            .from('specialists')
+            .select('id, name, specialties')
+            .eq('clinic_id', clinicId)
+            .eq('is_active', true);
+
+        // If service_id is provided, filter by specialists who can perform it
+        // If not provided, return all active specialists
+        const { data, error } = await query;
+
+        if (error) {
+            console.warn('[Specialists] Error fetching:', error);
+            return [];
+        }
+
+        // Filter by service_id if provided
+        if (serviceId && data) {
+            return data.filter((s: Specialist) =>
+                s.specialties && s.specialties.includes(serviceId)
+            );
+        }
+
+        return data || [];
+    } catch (error) {
+        console.warn('[Specialists] Exception fetching:', error);
+        return [];
     }
 }
 
@@ -120,11 +163,8 @@ async function fetchGoogleCalendarEvents(date: string): Promise<CalendarEvent[]>
 
     try {
         const serviceAccount = JSON.parse(serviceAccountJson);
-
-        // Generate JWT for Google API authentication
         const jwt = await generateGoogleJWT(serviceAccount);
 
-        // Exchange JWT for access token
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -142,7 +182,6 @@ async function fetchGoogleCalendarEvents(date: string): Promise<CalendarEvent[]>
 
         const { access_token } = await tokenResponse.json();
 
-        // Fetch calendar events for the date
         const timeMin = `${date}T00:00:00Z`;
         const timeMax = `${date}T23:59:59Z`;
 
@@ -184,11 +223,10 @@ async function generateGoogleJWT(serviceAccount: {
         iss: serviceAccount.client_email,
         scope: 'https://www.googleapis.com/auth/calendar.readonly',
         aud: 'https://oauth2.googleapis.com/token',
-        exp: now + 3600, // 1 hour
+        exp: now + 3600,
         iat: now,
     };
 
-    // Base64url encode
     const encoder = new TextEncoder();
     const base64url = (data: Uint8Array): string => {
         return btoa(String.fromCharCode(...data))
@@ -201,7 +239,6 @@ async function generateGoogleJWT(serviceAccount: {
     const payloadB64 = base64url(encoder.encode(JSON.stringify(payload)));
     const message = `${headerB64}.${payloadB64}`;
 
-    // Import private key and sign
     const pemHeader = '-----BEGIN PRIVATE KEY-----';
     const pemFooter = '-----END PRIVATE KEY-----';
     const pemContents = serviceAccount.private_key
@@ -236,10 +273,11 @@ Deno.serve(async (req) => {
     }
 
     try {
-        // Parse date and clinic_id from query params
+        // Parse query params
         const url = new URL(req.url);
         const date = url.searchParams.get('date');
-        const clinicId = url.searchParams.get('clinic_id') || 'sample';
+        const clinicId = url.searchParams.get('clinic_id') || 'butkevica';
+        const serviceId = url.searchParams.get('service_id'); // Optional: filter by service
 
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
             return new Response(
@@ -248,7 +286,7 @@ Deno.serve(async (req) => {
             );
         }
 
-        console.log(`[Availability] Checking slots for ${date} (Clinic: ${clinicId})`);
+        console.log(`[Availability] Checking slots for ${date} (Clinic: ${clinicId}, Service: ${serviceId || 'any'})`);
 
         // Initialize Supabase client
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -266,13 +304,11 @@ Deno.serve(async (req) => {
         let endHour: number;
 
         if (workingHoursConfig) {
-            // Use database configuration
             isOpen = workingHoursConfig.is_open;
             startHour = parseTimeToHour(workingHoursConfig.open_time);
             endHour = parseTimeToHour(workingHoursConfig.close_time);
             console.log(`[Availability] Using DB config for day ${dayOfWeek}: open=${isOpen}, ${startHour}:00-${endHour}:00`);
         } else {
-            // Fall back to defaults (Mon-Fri, 9-18)
             isOpen = DEFAULT_OPEN_DAYS.includes(dayOfWeek);
             startHour = DEFAULT_START_HOUR;
             endHour = DEFAULT_END_HOUR;
@@ -288,11 +324,31 @@ Deno.serve(async (req) => {
             );
         }
 
-        // Fetch bookings from database
-        // Include status and slot_lock_expires_at to filter out active locks
+        // ========================
+        // MULTI-SPECIALIST LOGIC
+        // ========================
+
+        // 1. Fetch qualified specialists for this service
+        const qualifiedSpecialists = await fetchQualifiedSpecialists(supabase, clinicId, serviceId);
+        const specialistCount = qualifiedSpecialists.length;
+        const specialistIds = qualifiedSpecialists.map(s => s.id);
+
+        console.log(`[Availability] Found ${specialistCount} qualified specialists for service ${serviceId || 'any'}: ${specialistIds.join(', ')}`);
+
+        // If no specialists can perform this service, all slots are unavailable
+        if (specialistCount === 0) {
+            console.log(`[Availability] No qualified specialists found. All slots unavailable.`);
+            const allSlots = generateSlots(date, startHour, endHour);
+            return new Response(
+                JSON.stringify({ slots: allSlots.map(s => ({ time: s.time, available: false })) }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
+
+        // 2. Fetch bookings from database (only for qualified specialists OR unassigned)
         const { data: dbBookings, error: dbError } = await supabase
             .from('bookings')
-            .select('start_time, end_time, status, slot_lock_expires_at')
+            .select('start_time, end_time, status, slot_lock_expires_at, specialist_id')
             .eq('clinic_id', clinicId)
             .gte('start_time', `${date}T00:00:00`)
             .lte('start_time', `${date}T23:59:59`);
@@ -305,49 +361,65 @@ Deno.serve(async (req) => {
             );
         }
 
-        // Filter to only bookings that block the slot:
-        // 1. Confirmed/completed bookings always block
-        // 2. Pending bookings with active (non-expired) locks block
+        // 3. Filter to only bookings that block qualified specialists
         const now = new Date().getTime();
-        const blockedBookings = (dbBookings || []).filter(booking => {
-            // Confirmed/completed always block
-            if (booking.status === 'confirmed' || booking.status === 'completed') {
-                return true;
+        const blockedBookings = (dbBookings || []).filter((booking: Booking) => {
+            // Only consider confirmed/completed or pending with active locks
+            const isBlocking =
+                booking.status === 'confirmed' ||
+                booking.status === 'completed' ||
+                (booking.status === 'pending' && booking.slot_lock_expires_at &&
+                    new Date(booking.slot_lock_expires_at).getTime() > now);
+
+            if (!isBlocking) return false;
+
+            // If booking has a specialist_id, only block if that specialist is in our qualified list
+            // If booking has no specialist_id (unassigned), it blocks one slot from the general pool
+            if (booking.specialist_id) {
+                return specialistIds.includes(booking.specialist_id);
             }
-            // Pending with active lock blocks
-            if (booking.status === 'pending' && booking.slot_lock_expires_at) {
-                const lockExpiry = new Date(booking.slot_lock_expires_at).getTime();
-                return lockExpiry > now;
-            }
-            // Cancelled or expired locks don't block
-            return false;
+
+            // Unassigned bookings count against the pool
+            return true;
         });
 
-        console.log(`[Supabase] Found ${dbBookings?.length || 0} bookings, ${blockedBookings.length} blocking for ${date}`);
+        console.log(`[Supabase] Found ${dbBookings?.length || 0} bookings, ${blockedBookings.length} blocking qualified specialists`);
 
-        // Fetch Google Calendar events
+        // 4. Fetch Google Calendar events (these block globally for now)
         const gCalEvents = await fetchGoogleCalendarEvents(date);
 
-        // Generate all slots
+        // 5. Generate all slots and check availability with capacity logic
         const allSlots = generateSlots(date, startHour, endHour);
 
-        // Filter availability
         const availableSlots: TimeSlot[] = allSlots.map((slot) => {
             const slotStart = new Date(slot.iso).getTime();
             const slotEnd = slotStart + SLOT_DURATION_MINUTES * 60 * 1000;
 
-            // Check against database bookings (only those that actually block)
+            // Count how many qualified specialists are booked at this slot
+            let bookedSpecialistCount = 0;
+            const bookedSpecialistIds: Set<string> = new Set();
+
             for (const booking of blockedBookings) {
                 if (booking.start_time && booking.end_time) {
                     const busyStart = new Date(booking.start_time).getTime();
                     const busyEnd = new Date(booking.end_time).getTime();
+
                     if (isOverlapping(slotStart, slotEnd, busyStart, busyEnd)) {
-                        return { time: slot.time, available: false };
+                        if (booking.specialist_id) {
+                            // Specific specialist booked
+                            if (!bookedSpecialistIds.has(booking.specialist_id)) {
+                                bookedSpecialistIds.add(booking.specialist_id);
+                                bookedSpecialistCount++;
+                            }
+                        } else {
+                            // Unassigned booking - counts as one specialist slot taken
+                            bookedSpecialistCount++;
+                        }
                     }
                 }
             }
 
-            // Check against Google Calendar events
+            // Check Google Calendar - these block everyone (clinic-wide events)
             for (const event of gCalEvents) {
                 const eventStart = event.start?.dateTime || event.start?.date;
                 const eventEnd = event.end?.dateTime || event.end?.date;
@@ -355,15 +427,25 @@ Deno.serve(async (req) => {
                     const busyStart = new Date(eventStart).getTime();
                     const busyEnd = new Date(eventEnd).getTime();
                     if (isOverlapping(slotStart, slotEnd, busyStart, busyEnd)) {
-                        return { time: slot.time, available: false };
+                        // GCal event blocks ALL specialists
+                        return { time: slot.time, available: false, available_specialists: 0 };
                     }
                 }
             }
 
-            return { time: slot.time, available: true };
+            // Slot is available if there are still free specialists
+            const freeSpecialists = specialistCount - bookedSpecialistCount;
+            const isAvailable = freeSpecialists > 0;
+
+            return {
+                time: slot.time,
+                available: isAvailable,
+                available_specialists: freeSpecialists
+            };
         });
 
-        console.log(`[Availability] Returning ${availableSlots.filter(s => s.available).length}/${availableSlots.length} available slots`);
+        const availableCount = availableSlots.filter(s => s.available).length;
+        console.log(`[Availability] Returning ${availableCount}/${availableSlots.length} available slots`);
 
         return new Response(
             JSON.stringify({ slots: availableSlots }),

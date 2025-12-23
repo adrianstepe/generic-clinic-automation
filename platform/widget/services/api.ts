@@ -25,7 +25,7 @@ const getN8nUrl = () => import.meta.env.VITE_N8N_AVAILABILITY_URL;
 /**
  * Check availability for a given date.
  */
-export const checkAvailability = async (date: string, clinicId: string): Promise<{ slots: TimeSlot[] }> => {
+export const checkAvailability = async (date: string, clinicId: string, serviceId?: string): Promise<{ slots: TimeSlot[] }> => {
     const edgeFunctionUrl = getEdgeFunctionUrl();
     const n8nUrl = getN8nUrl();
 
@@ -35,6 +35,7 @@ export const checkAvailability = async (date: string, clinicId: string): Promise
             const url = new URL(edgeFunctionUrl);
             url.searchParams.set('date', date);
             url.searchParams.set('clinic_id', clinicId);
+            if (serviceId) url.searchParams.set('service_id', serviceId);
 
             console.log('[Availability] Trying Supabase Edge Function...');
             const response = await fetch(url.toString(), {
@@ -65,6 +66,7 @@ export const checkAvailability = async (date: string, clinicId: string): Promise
             const url = new URL(n8nUrl);
             url.searchParams.set('date', date);
             url.searchParams.set('clinic_id', clinicId);
+            if (serviceId) url.searchParams.set('service_id', serviceId);
 
             const response = await fetch(url.toString(), {
                 method: 'GET',
@@ -93,7 +95,7 @@ export const checkAvailability = async (date: string, clinicId: string): Promise
 /**
  * Get availability counts for a range of dates.
  */
-export const getWeekAvailability = async (startDate: string, endDate: string, clinicId: string): Promise<Record<string, number>> => {
+export const getWeekAvailability = async (startDate: string, endDate: string, clinicId: string, serviceId?: string): Promise<Record<string, number>> => {
     const result: Record<string, number> = {};
 
     // Parse dates and iterate through range
@@ -109,7 +111,7 @@ export const getWeekAvailability = async (startDate: string, endDate: string, cl
         const fetchDate = new Date(currentDate);
 
         datePromises.push(
-            checkAvailability(dateStr, clinicId).then(data => {
+            checkAvailability(dateStr, clinicId, serviceId).then(data => {
                 const availableCount = data.slots?.filter(s => s.available).length || 0;
                 result[fetchDate.toLocaleDateString('en-CA')] = availableCount;
             }).catch(() => {
@@ -127,7 +129,7 @@ export const getWeekAvailability = async (startDate: string, endDate: string, cl
 /**
  * Find the first date with at least one available slot.
  */
-export const getFirstAvailableDate = async (maxDaysAhead: number = 60, clinicId: string): Promise<{ date: string; time: string } | null> => {
+export const getFirstAvailableDate = async (maxDaysAhead: number = 60, clinicId: string, serviceId?: string): Promise<{ date: string; time: string } | null> => {
     const today = new Date();
 
     for (let i = 1; i <= maxDaysAhead; i++) {
@@ -136,7 +138,7 @@ export const getFirstAvailableDate = async (maxDaysAhead: number = 60, clinicId:
         const dateStr = checkDate.toLocaleDateString('en-CA');
 
         try {
-            const data = await checkAvailability(dateStr, clinicId);
+            const data = await checkAvailability(dateStr, clinicId, serviceId);
             const availableSlot = data.slots?.find(s => s.available);
 
             if (availableSlot) {
