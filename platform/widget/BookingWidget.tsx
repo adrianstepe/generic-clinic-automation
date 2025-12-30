@@ -16,10 +16,12 @@ const BookingWidget: React.FC = () => {
     const { texts, clinicId } = useConfig();
     const { trackStep, trackLanguageChange, trackBookingComplete } = useAnalytics();
 
+    const STORAGE_KEY = `${clinicId}_booking_state`;
+
     const [booking, setBooking] = useState<BookingState>(() => {
         // Lazy Initialization: Synchronously read from localStorage to prevent race conditions
         if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('butkevicaBookingState');
+            const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
@@ -73,8 +75,8 @@ const BookingWidget: React.FC = () => {
 
     // Persist state to localStorage to handle redirect flows (like Stripe)
     useEffect(() => {
-        localStorage.setItem('butkevicaBookingState', JSON.stringify(booking));
-    }, [booking]);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(booking));
+    }, [booking, STORAGE_KEY]);
 
     // Check for success return from Payment provider
     useEffect(() => {
@@ -151,6 +153,9 @@ const BookingWidget: React.FC = () => {
     // Theme: Always default to light mode for clean medical aesthetic
     // User can toggle manually, persisted to localStorage
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+        // Force light mode for demo to ensure professional look
+        if (clinicId === 'demo-clinic') return 'light';
+
         if (typeof window !== 'undefined' && localStorage.theme === 'dark') {
             return 'dark';
         }
