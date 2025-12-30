@@ -18,7 +18,7 @@ export async function onRequestPost(context) {
 
         // API Key Strategy: Use env var from Pages Settings
         // Fallback key is for DEMO PURPOSES ONLY.
-        const STRIPE_KEY = env.STRIPE_SECRET_KEY || 'sk_test_51SWlJVPpmaMxWLdbbV11gU22FGcs31wR0c7CtNV3NgKSdTW2ofdTMJgWexCC0Pff2jPaFgpOsdROcai6qrq3K95s00GMdBfZJd';
+        const STRIPE_KEY = env.STRIPE_SECRET_KEY || 'sk_test_51SX3fTPj1OTNtDrGF3gdymNxmZKDuhiw2s6HP62JWi1YkhAqcbFN7TX8ryExaRE6IgOGLUkcBAdukKv8aELrJEFA00OqFXAHne';
 
         // Construct form-urlencoded body for Stripe API
         const formData = new URLSearchParams();
