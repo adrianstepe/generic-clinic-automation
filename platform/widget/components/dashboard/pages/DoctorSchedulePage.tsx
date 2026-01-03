@@ -36,7 +36,8 @@ const DEFAULT_SCHEDULE: DaySchedule[] = [
 const DoctorSchedulePage: React.FC = () => {
     const { profile } = useUser();
     const clinicId = import.meta.env.VITE_CLINIC_ID;
-    const isAdmin = profile?.role === 'admin';
+    // Match sidebar logic: if not explicitly a doctor, treat as admin
+    const isAdmin = profile?.role !== 'doctor';
 
     const [specialists, setSpecialists] = useState<Specialist[]>([]);
     const [services, setServices] = useState<Service[]>([]);
