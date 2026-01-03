@@ -93,7 +93,12 @@ const BookingsPage: React.FC = () => {
         }
     };
 
-    const handleMarkStatus = async (bookingId: string, newStatus: 'completed' | 'no_show') => {
+    const handleMarkStatus = async (bookingId: string, newStatus: 'completed' | 'no_show', customerName: string) => {
+        const statusLabel = newStatus === 'completed' ? 'Completed' : 'No-Show';
+        const confirmed = window.confirm(`Are you sure you want to mark ${customerName}'s booking as "${statusLabel}"?\n\nThis action cannot be undone.`);
+
+        if (!confirmed) return;
+
         setUpdating(bookingId);
         try {
             const { error } = await supabase
@@ -225,8 +230,8 @@ const BookingsPage: React.FC = () => {
                         key={tab.key}
                         onClick={() => setFilter(tab.key as typeof filter)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === tab.key
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                             }`}
                     >
                         {tab.label}
@@ -322,7 +327,7 @@ const BookingsPage: React.FC = () => {
                                                 {needsReview ? (
                                                     <>
                                                         <button
-                                                            onClick={() => handleMarkStatus(booking.id, 'completed')}
+                                                            onClick={() => handleMarkStatus(booking.id, 'completed', booking.customer_name)}
                                                             disabled={updating === booking.id}
                                                             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                                                         >
@@ -334,7 +339,7 @@ const BookingsPage: React.FC = () => {
                                                             Completed
                                                         </button>
                                                         <button
-                                                            onClick={() => handleMarkStatus(booking.id, 'no_show')}
+                                                            onClick={() => handleMarkStatus(booking.id, 'no_show', booking.customer_name)}
                                                             disabled={updating === booking.id}
                                                             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                                                         >
