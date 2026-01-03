@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, LogOut, Shield, Clock, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, Building2, LogOut, Shield, Clock, CalendarCheck, User } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 
 interface NavItem {
@@ -17,7 +17,8 @@ const SuperAdminSidebar: React.FC = () => {
     const navItems: NavItem[] = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/super-admin', end: true },
         { icon: Building2, label: 'Clinics', path: '/super-admin/clinics' },
-        { icon: Clock, label: 'Working Hours', path: '/super-admin/working-hours' },
+        { icon: Clock, label: 'Clinic Hours', path: '/super-admin/working-hours' },
+        { icon: User, label: 'Doctor Schedules', path: '/super-admin/doctor-schedules' },
         { icon: CalendarCheck, label: 'Bookings', path: '/super-admin/bookings' },
     ];
 

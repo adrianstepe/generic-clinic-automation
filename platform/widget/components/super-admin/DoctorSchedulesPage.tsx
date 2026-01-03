@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/supabaseClient';
-import { useUser } from '@/contexts/UserContext';
-import { Clock, Save, Loader2, User, Stethoscope } from 'lucide-react';
+import { supabase } from '../../supabaseClient';
+import { Clock, Save, Loader2, Building2, User, Stethoscope } from 'lucide-react';
 
 interface DaySchedule {
     day_of_week: number;
     is_available: boolean;
     start_time: string;
     end_time: string;
+}
+
+interface Clinic {
+    id: string;
+    name: string;
 }
 
 interface Specialist {
@@ -21,7 +25,7 @@ interface Service {
     name: { lv?: string; en?: string };
 }
 
-const DAY_NAMES_LV = ['Svētdiena', 'Pirmdiena', 'Otrdiena', 'Trešdiena', 'Ceturtdiena', 'Piektdiena', 'Sestdiena'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // Display order: Monday (1) through Sunday (0) - European week format
 const DEFAULT_SCHEDULE: DaySchedule[] = [
@@ -34,12 +38,9 @@ const DEFAULT_SCHEDULE: DaySchedule[] = [
     { day_of_week: 0, is_available: false, start_time: '09:00', end_time: '18:00' },
 ];
 
-const DoctorSchedulePage: React.FC = () => {
-    const { profile } = useUser();
-    const clinicId = import.meta.env.VITE_CLINIC_ID;
-    // Match sidebar logic: if not explicitly a doctor, treat as admin
-    const isAdmin = profile?.role !== 'doctor';
-
+const DoctorSchedulesPage: React.FC = () => {
+    const [clinics, setClinics] = useState<Clinic[]>([]);
+    const [selectedClinicId, setSelectedClinicId] = useState<string>('');
     const [specialists, setSpecialists] = useState<Specialist[]>([]);
     const [services, setServices] = useState<Service[]>([]);
     const [selectedSpecialistId, setSelectedSpecialistId] = useState<string>('');
@@ -49,20 +50,18 @@ const DoctorSchedulePage: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    // Fetch specialists and services on mount
+    // Fetch clinics on mount
     useEffect(() => {
-        if (clinicId) {
-            fetchSpecialists();
-            fetchServices();
-        }
-    }, [clinicId]);
+        fetchClinics();
+    }, []);
 
-    // For doctors, auto-select their own specialist ID
+    // Fetch specialists and services when clinic changes
     useEffect(() => {
-        if (!isAdmin && profile?.specialist_id) {
-            setSelectedSpecialistId(profile.specialist_id);
+        if (selectedClinicId) {
+            fetchSpecialists(selectedClinicId);
+            fetchServices(selectedClinicId);
         }
-    }, [isAdmin, profile]);
+    }, [selectedClinicId]);
 
     // Fetch schedule when specialist changes
     useEffect(() => {
@@ -75,7 +74,27 @@ const DoctorSchedulePage: React.FC = () => {
         }
     }, [selectedSpecialistId, specialists]);
 
-    const fetchSpecialists = async () => {
+    const fetchClinics = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('clinics')
+                .select('id, name')
+                .order('name');
+
+            if (error) throw error;
+            setClinics(data || []);
+
+            if (data && data.length > 0) {
+                setSelectedClinicId(data[0].id);
+            }
+        } catch (error) {
+            console.error('[DoctorSchedulesPage] Error fetching clinics:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchSpecialists = async (clinicId: string) => {
         try {
             const { data, error } = await supabase
                 .from('specialists')
@@ -86,18 +105,18 @@ const DoctorSchedulePage: React.FC = () => {
             if (error) throw error;
             setSpecialists(data || []);
 
-            // Auto-select first for admin if not already set
-            if (data && data.length > 0 && !selectedSpecialistId && isAdmin) {
+            if (data && data.length > 0) {
                 setSelectedSpecialistId(data[0].id);
+            } else {
+                setSelectedSpecialistId('');
+                setSchedule(DEFAULT_SCHEDULE);
             }
         } catch (error) {
-            console.error('[DoctorSchedulePage] Error fetching specialists:', error);
-        } finally {
-            setLoading(false);
+            console.error('[DoctorSchedulesPage] Error fetching specialists:', error);
         }
     };
 
-    const fetchServices = async () => {
+    const fetchServices = async (clinicId: string) => {
         try {
             const { data, error } = await supabase
                 .from('services')
@@ -107,7 +126,7 @@ const DoctorSchedulePage: React.FC = () => {
             if (error) throw error;
             setServices(data || []);
         } catch (error) {
-            console.error('[DoctorSchedulePage] Error fetching services:', error);
+            console.error('[DoctorSchedulesPage] Error fetching services:', error);
         }
     };
 
@@ -128,7 +147,7 @@ const DoctorSchedulePage: React.FC = () => {
                     start_time: row.start_time?.substring(0, 5) || '09:00',
                     end_time: row.end_time?.substring(0, 5) || '18:00',
                 }));
-                // Sort to European week order: Mon(1), Tue(2)... Sat(6), Sun(0)
+                // Sort to European week order
                 const euroOrder = [1, 2, 3, 4, 5, 6, 0];
                 scheduleData.sort((a, b) => euroOrder.indexOf(a.day_of_week) - euroOrder.indexOf(b.day_of_week));
                 setSchedule(scheduleData);
@@ -136,7 +155,7 @@ const DoctorSchedulePage: React.FC = () => {
                 setSchedule(DEFAULT_SCHEDULE);
             }
         } catch (error) {
-            console.error('[DoctorSchedulePage] Error fetching schedule:', error);
+            console.error('[DoctorSchedulesPage] Error fetching schedule:', error);
         }
     };
 
@@ -204,11 +223,11 @@ const DoctorSchedulePage: React.FC = () => {
                 )
             );
 
-            setMessage({ type: 'success', text: 'Grafiks un specializācijas saglabātas!' });
+            setMessage({ type: 'success', text: 'Schedule and specialties saved!' });
             setTimeout(() => setMessage(null), 3000);
         } catch (error: any) {
-            console.error('[DoctorSchedulePage] Error saving:', error);
-            setMessage({ type: 'error', text: error.message || 'Kļūda saglabājot' });
+            console.error('[DoctorSchedulesPage] Error saving:', error);
+            setMessage({ type: 'error', text: error.message || 'Failed to save' });
         } finally {
             setSaving(false);
         }
@@ -226,13 +245,13 @@ const DoctorSchedulePage: React.FC = () => {
     };
 
     const timeOptions = generateTimeOptions();
-
     const selectedSpecialist = specialists.find(s => s.id === selectedSpecialistId);
+    const selectedClinic = clinics.find(c => c.id === selectedClinicId);
 
-    if (loading) {
+    if (loading && clinics.length === 0) {
         return (
             <div className="p-8 flex items-center justify-center">
-                <Loader2 className="animate-spin text-teal-500" size={32} />
+                <Loader2 className="animate-spin text-purple-500" size={32} />
             </div>
         );
     }
@@ -241,26 +260,43 @@ const DoctorSchedulePage: React.FC = () => {
         <div className="p-8 max-w-4xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-                    <Clock className="text-teal-500" size={28} />
-                    {isAdmin ? 'Speciālistu Grafiks' : 'Mans Grafiks'}
+                <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <User className="text-purple-400" size={28} />
+                    Doctor Schedules
                 </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">
-                    {isAdmin ? 'Pārvaldiet speciālistu darba laikus un specializācijas' : 'Pārvaldiet savu darba grafiku'}
-                </p>
+                <p className="text-slate-400 mt-1">Manage individual doctor working hours and specialties</p>
             </div>
 
-            {/* Specialist Selector (Admin only) */}
-            {isAdmin && specialists.length > 0 && (
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6 mb-6">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+            {/* Clinic Selector */}
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                    <Building2 size={16} />
+                    Select Clinic
+                </label>
+                <select
+                    value={selectedClinicId}
+                    onChange={(e) => setSelectedClinicId(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
+                >
+                    {clinics.map(clinic => (
+                        <option key={clinic.id} value={clinic.id}>
+                            {clinic.name} ({clinic.id})
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Specialist Selector */}
+            {specialists.length > 0 ? (
+                <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
+                    <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
                         <User size={16} />
-                        Izvēlieties speciālistu
+                        Select Doctor
                     </label>
                     <select
                         value={selectedSpecialistId}
                         onChange={(e) => setSelectedSpecialistId(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-lg text-slate-800 dark:text-white focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
                     >
                         {specialists.map(spec => (
                             <option key={spec.id} value={spec.id}>
@@ -269,28 +305,19 @@ const DoctorSchedulePage: React.FC = () => {
                         ))}
                     </select>
                 </div>
-            )}
-
-            {/* Display selected specialist name for non-admin */}
-            {!isAdmin && selectedSpecialist && (
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6 mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">
-                            <User className="text-teal-600 dark:text-teal-400" size={24} />
-                        </div>
-                        <div>
-                            <p className="text-lg font-semibold text-slate-800 dark:text-white">{selectedSpecialist.name}</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Ārsts</p>
-                        </div>
-                    </div>
+            ) : selectedClinicId ? (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-6 mb-6 text-center">
+                    <p className="text-yellow-400">
+                        No doctors found at {selectedClinic?.name}. Add specialists first.
+                    </p>
                 </div>
-            )}
+            ) : null}
 
             {/* Message */}
             {message && (
                 <div className={`mb-6 px-4 py-3 rounded-lg ${message.type === 'success'
-                    ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-500/30 text-green-700 dark:text-green-400'
-                    : 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400'
+                    ? 'bg-green-900/30 border border-green-500/30 text-green-400'
+                    : 'bg-red-900/30 border border-red-500/30 text-red-400'
                     }`}>
                     {message.text}
                 </div>
@@ -299,13 +326,13 @@ const DoctorSchedulePage: React.FC = () => {
             {selectedSpecialistId && (
                 <>
                     {/* Specialties Section */}
-                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">
-                        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                            <h2 className="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                                <Stethoscope size={20} className="text-teal-500" />
-                                Specializācijas
+                    <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-6">
+                        <div className="p-4 border-b border-slate-700 bg-slate-800/50">
+                            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Stethoscope size={20} className="text-purple-400" />
+                                Specialties
                             </h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Izvēlieties pakalpojumus, ko šis speciālists var veikt</p>
+                            <p className="text-sm text-slate-400">Select services this doctor can perform</p>
                         </div>
                         <div className="p-4">
                             <div className="flex flex-wrap gap-3">
@@ -317,8 +344,8 @@ const DoctorSchedulePage: React.FC = () => {
                                             key={service.id}
                                             onClick={() => handleSpecialtyToggle(service.id)}
                                             className={`px-4 py-2 rounded-lg border transition-all ${isSelected
-                                                ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-500 text-teal-700 dark:text-teal-300'
-                                                : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-teal-300'
+                                                ? 'bg-purple-900/30 border-purple-500 text-purple-300'
+                                                : 'bg-slate-700 border-slate-600 text-slate-400 hover:border-purple-400'
                                                 }`}
                                         >
                                             {isSelected && <span className="mr-2">✓</span>}
@@ -328,30 +355,33 @@ const DoctorSchedulePage: React.FC = () => {
                                 })}
                             </div>
                             {services.length === 0 && (
-                                <p className="text-slate-500 dark:text-slate-400 text-center py-4">
-                                    Nav pieejamu pakalpojumu
+                                <p className="text-slate-500 text-center py-4">
+                                    No services available
                                 </p>
                             )}
                         </div>
                     </div>
 
                     {/* Schedule Grid */}
-                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Darba Grafiks</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Iestatiet darba laikus katrai dienai</p>
+                    <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                        <div className="p-4 border-b border-slate-700 bg-slate-800/50">
+                            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Clock size={20} className="text-purple-400" />
+                                Working Hours
+                            </h2>
+                            <p className="text-sm text-slate-400">Set working hours for each day</p>
                         </div>
 
-                        <div className="divide-y divide-gray-200 dark:divide-slate-700">
+                        <div className="divide-y divide-slate-700">
                             {schedule.map((day) => (
                                 <div
                                     key={day.day_of_week}
-                                    className={`p-4 flex items-center gap-4 ${!day.is_available ? 'bg-gray-50 dark:bg-slate-900/50' : ''}`}
+                                    className={`p-4 flex items-center gap-4 ${!day.is_available ? 'bg-slate-900/50' : ''}`}
                                 >
                                     {/* Toggle */}
                                     <button
                                         onClick={() => handleDayToggle(day.day_of_week)}
-                                        className={`w-14 h-8 rounded-full relative transition-colors ${day.is_available ? 'bg-teal-600' : 'bg-gray-300 dark:bg-slate-600'
+                                        className={`w-14 h-8 rounded-full relative transition-colors ${day.is_available ? 'bg-purple-600' : 'bg-slate-600'
                                             }`}
                                     >
                                         <div
@@ -362,18 +392,18 @@ const DoctorSchedulePage: React.FC = () => {
 
                                     {/* Day Name */}
                                     <div className="w-28">
-                                        <span className={`font-medium ${day.is_available ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                                            {DAY_NAMES_LV[day.day_of_week]}
+                                        <span className={`font-medium ${day.is_available ? 'text-white' : 'text-slate-500'}`}>
+                                            {DAY_NAMES[day.day_of_week]}
                                         </span>
                                     </div>
 
                                     {/* Status Badge */}
                                     <div className="w-24">
                                         <span className={`text-xs px-2 py-1 rounded ${day.is_available
-                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                            : 'bg-gray-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                                            ? 'bg-green-900/30 text-green-400'
+                                            : 'bg-slate-700 text-slate-400'
                                             }`}>
-                                            {day.is_available ? 'Strādā' : 'Brīvs'}
+                                            {day.is_available ? 'Working' : 'Off'}
                                         </span>
                                     </div>
 
@@ -383,17 +413,17 @@ const DoctorSchedulePage: React.FC = () => {
                                             <select
                                                 value={day.start_time}
                                                 onChange={(e) => handleTimeChange(day.day_of_week, 'start_time', e.target.value)}
-                                                className="px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-lg text-slate-800 dark:text-white text-sm focus:ring-teal-500 focus:border-teal-500"
+                                                className="px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:ring-purple-500 focus:border-purple-500"
                                             >
                                                 {timeOptions.map(time => (
                                                     <option key={time} value={time}>{time}</option>
                                                 ))}
                                             </select>
-                                            <span className="text-slate-400">līdz</span>
+                                            <span className="text-slate-500">to</span>
                                             <select
                                                 value={day.end_time}
                                                 onChange={(e) => handleTimeChange(day.day_of_week, 'end_time', e.target.value)}
-                                                className="px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-lg text-slate-800 dark:text-white text-sm focus:ring-teal-500 focus:border-teal-500"
+                                                className="px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:ring-purple-500 focus:border-purple-500"
                                             >
                                                 {timeOptions.map(time => (
                                                     <option key={time} value={time}>{time}</option>
@@ -406,21 +436,21 @@ const DoctorSchedulePage: React.FC = () => {
                         </div>
 
                         {/* Save Button */}
-                        <div className="p-4 bg-gray-50 dark:bg-slate-700/30 flex justify-end">
+                        <div className="p-4 bg-slate-700/30 flex justify-end">
                             <button
                                 onClick={handleSave}
                                 disabled={saving || !selectedSpecialistId}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                             >
                                 {saving ? (
                                     <>
                                         <Loader2 className="animate-spin" size={18} />
-                                        Saglabā...
+                                        Saving...
                                     </>
                                 ) : (
                                     <>
                                         <Save size={18} />
-                                        Saglabāt
+                                        Save Schedule
                                     </>
                                 )}
                             </button>
@@ -428,18 +458,18 @@ const DoctorSchedulePage: React.FC = () => {
                     </div>
 
                     {/* Schedule Preview */}
-                    <div className="mt-6 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
-                        <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Grafika Pārskats</h3>
+                    <div className="mt-6 bg-slate-800 rounded-xl border border-slate-700 p-6">
+                        <h3 className="text-sm font-medium text-slate-400 mb-3">Schedule Preview for {selectedSpecialist?.name}</h3>
                         <div className="flex flex-wrap gap-2">
                             {schedule.map(day => (
                                 <div
                                     key={day.day_of_week}
                                     className={`px-3 py-2 rounded-lg text-sm ${day.is_available
-                                        ? 'bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-500/30 text-teal-700 dark:text-teal-300'
-                                        : 'bg-gray-100 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500'
+                                        ? 'bg-purple-900/30 border border-purple-500/30 text-purple-300'
+                                        : 'bg-slate-700/50 text-slate-500'
                                         }`}
                                 >
-                                    <span className="font-medium">{DAY_NAMES_LV[day.day_of_week].slice(0, 3)}</span>
+                                    <span className="font-medium">{DAY_NAMES[day.day_of_week].slice(0, 3)}</span>
                                     {day.is_available && (
                                         <span className="ml-2 text-xs opacity-75">
                                             {day.start_time}-{day.end_time}
@@ -451,16 +481,8 @@ const DoctorSchedulePage: React.FC = () => {
                     </div>
                 </>
             )}
-
-            {!selectedSpecialistId && specialists.length === 0 && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-xl p-6 text-center">
-                    <p className="text-yellow-700 dark:text-yellow-400">
-                        Nav pievienotu speciālistu. Lūdzu vispirms pievienojiet speciālistus.
-                    </p>
-                </div>
-            )}
         </div>
     );
 };
 
-export default DoctorSchedulePage;
+export default DoctorSchedulesPage;

@@ -19,6 +19,7 @@ import SuperAdminDashboard from './components/super-admin/SuperAdminDashboard';
 import ClinicsPage from './components/super-admin/ClinicsPage';
 import WorkingHoursPage from './components/super-admin/WorkingHoursPage';
 import BookingsPage from './components/super-admin/BookingsPage';
+import DoctorSchedulesPage from './components/super-admin/DoctorSchedulesPage';
 
 // Helper to determine Clinic ID from environment or subdomain
 const getClinicId = () => {
@@ -80,6 +81,7 @@ function App() {
                             <Route index element={<SuperAdminDashboard />} />
                             <Route path="clinics" element={<ClinicsPage />} />
                             <Route path="working-hours" element={<WorkingHoursPage />} />
+                            <Route path="doctor-schedules" element={<DoctorSchedulesPage />} />
                             <Route path="bookings" element={<BookingsPage />} />
                         </Route>
 

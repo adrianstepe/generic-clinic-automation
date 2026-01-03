@@ -7,9 +7,9 @@ import {
     XCircle,
     Clock,
     RefreshCw,
-    User,
+    Mail,
     Phone,
-    Mail
+    Building2
 } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 
@@ -28,18 +28,59 @@ interface Booking {
     created_at: string;
 }
 
+interface Clinic {
+    id: string;
+    name: string;
+}
+
 const BookingsPage: React.FC = () => {
+    const [clinics, setClinics] = useState<Clinic[]>([]);
+    const [selectedClinicId, setSelectedClinicId] = useState<string>('');
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'no_show'>('all');
 
-    const fetchBookings = async () => {
+    // Fetch clinics on mount
+    useEffect(() => {
+        fetchClinics();
+    }, []);
+
+    // Fetch bookings when clinic changes
+    useEffect(() => {
+        if (selectedClinicId) {
+            fetchBookings(selectedClinicId);
+        }
+    }, [selectedClinicId]);
+
+    const fetchClinics = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('clinics')
+                .select('id, name')
+                .order('name');
+
+            if (error) throw error;
+            setClinics(data || []);
+
+            // Auto-select first clinic
+            if (data && data.length > 0) {
+                setSelectedClinicId(data[0].id);
+            }
+        } catch (error) {
+            console.error('[BookingsPage] Error fetching clinics:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchBookings = async (clinicId: string) => {
         setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('bookings')
                 .select('*')
+                .eq('clinic_id', clinicId)
                 .in('status', ['confirmed', 'completed'])
                 .order('start_time', { ascending: false });
 
@@ -51,10 +92,6 @@ const BookingsPage: React.FC = () => {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        fetchBookings();
-    }, []);
 
     const handleMarkStatus = async (bookingId: string, newStatus: 'completed' | 'no_show') => {
         setUpdating(bookingId);
@@ -115,15 +152,16 @@ const BookingsPage: React.FC = () => {
         );
     };
 
-    if (loading) {
+    const pendingCount = bookings.filter(b => !b.actual_status && isPast(parseISO(b.start_time))).length;
+    const selectedClinic = clinics.find(c => c.id === selectedClinicId);
+
+    if (loading && clinics.length === 0) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-10 w-10 animate-spin text-purple-500" />
             </div>
         );
     }
-
-    const pendingCount = bookings.filter(b => !b.actual_status && isPast(parseISO(b.start_time))).length;
 
     return (
         <div className="p-8">
@@ -136,12 +174,32 @@ const BookingsPage: React.FC = () => {
                     </p>
                 </div>
                 <button
-                    onClick={fetchBookings}
+                    onClick={() => selectedClinicId && fetchBookings(selectedClinicId)}
+                    disabled={loading}
                     className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
                 >
-                    <RefreshCw size={18} />
+                    <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     Refresh
                 </button>
+            </div>
+
+            {/* Clinic Selector */}
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                    <Building2 size={16} />
+                    Select Clinic
+                </label>
+                <select
+                    value={selectedClinicId}
+                    onChange={(e) => setSelectedClinicId(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
+                >
+                    {clinics.map(clinic => (
+                        <option key={clinic.id} value={clinic.id}>
+                            {clinic.name} ({clinic.id})
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Alert for pending reviews */}
@@ -150,6 +208,7 @@ const BookingsPage: React.FC = () => {
                     <Clock className="h-5 w-5 text-amber-400" />
                     <p className="text-amber-200">
                         <strong>{pendingCount}</strong> past appointment{pendingCount !== 1 ? 's' : ''} need{pendingCount === 1 ? 's' : ''} outcome review
+                        {selectedClinic && <span className="text-amber-400"> at {selectedClinic.name}</span>}
                     </p>
                 </div>
             )}
@@ -189,7 +248,9 @@ const BookingsPage: React.FC = () => {
                         <p className="text-slate-500">
                             {filter === 'pending'
                                 ? 'All past appointments have been reviewed!'
-                                : 'No bookings match this filter'}
+                                : selectedClinicId
+                                    ? 'No bookings match this filter'
+                                    : 'Select a clinic to view bookings'}
                         </p>
                     </div>
                 ) : (
