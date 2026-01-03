@@ -1,7 +1,7 @@
-# Antigravity System Architecture & Business Logic
+# Dental Booking Automation - System Architecture & Business Logic
 
 ## 1. System High-Level Overview
-The Antigravity system is a dental booking platform composed of four integrated components:
+This is a comprehensive dental booking automation platform composed of four integrated components:
 1.  **The Brain (Supabase):** Centralized database for bookings, services, and user profiles, secured with Row Level Security (RLS).
 2.  **The Face (Cloudflare Widget):** A React-based frontend embedded on the clinic's website, handling the user booking flow and payment processing via Stripe.
 3.  **The Nervous System (n8n):** An automation engine that orchestrates complex logic like availability checking, booking confirmation, reminders, and review requests. **This is the single source of truth for all booking writes.**
@@ -38,6 +38,7 @@ Central record of all appointments with full payment tracking.
 | `cancellation_token` | varchar | ❌ | Secure token for self-service cancellation |
 | `cancelled_at` | timestamptz | ❌ | When booking was cancelled |
 | `refund_status` | varchar | ❌ | processed/not_eligible/failed |
+| `specialist_id` | text | ❌ | Assigned specialist ID (result of selection or auto-assignment) |
 | `created_at` | timestamptz | Auto | |
 | `updated_at` | timestamptz | Auto | |
 | `expires_at` | timestamptz | ❌ | For pending bookings |
@@ -92,21 +93,20 @@ Replaces hardcoded SERVICES array in `constants.ts`. Allows service changes with
 | `display_order` | integer | ❌ | For ordering in UI |
 | `is_active` | boolean | ❌ | Default: true |
 
-#### `clinic_specialists` (Dynamic Configuration)
+#### `specialists` (Dynamic Configuration)
 Replaces hardcoded SPECIALISTS array in `constants.ts`.
 
 | Column | Type | Required | Notes |
 |--------|------|----------|-------|
 | `id` | text | PK | Specialist identifier (d1, d2, etc.) |
-| `business_id` | text | ✅ | Default: BUTKEVICA_DENTAL |
+| `clinic_id` | text | ✅ | Links to `clinics.id` |
 | `name` | text | ✅ | Full name |
-| `role_en` | text | ❌ | English role title |
-| `role_lv` | text | ❌ | Latvian role title |
-| `role_ru` | text | ❌ | Russian role title |
+| `role` | jsonb | ❌ | Localized role (en, lv, ru) |
 | `photo_url` | text | ❌ | Avatar URL |
-| `specialty_ids` | text[] | ❌ | Array of service IDs they can perform |
-| `display_order` | integer | ❌ | For ordering in UI |
+| `specialties` | text[] | ❌ | **CRITICAL:** Array of service IDs they are qualified for. Used by auto-assignment logic. |
 | `is_active` | boolean | ❌ | Default: true |
+| `display_order` | integer | ❌ | For ordering in UI |
+| `created_at` | timestamptz | Auto | |
 
 ### Automated Logic & Security
 *   **RLS Policies:**
@@ -119,7 +119,7 @@ Replaces hardcoded SPECIALISTS array in `constants.ts`.
     *   **Idempotency:** `stripe_session_id` has UNIQUE constraint. If Stripe sends duplicate webhooks, DB rejects the duplicate insert.
 
 
-## 3. Widget "Antigravity" Logic (Cloudflare)
+## 3. Booking Widget Logic (Cloudflare)
 ### Behavioral Flow
 1.  **Initialization:**
     *   Loads state from `localStorage` (persistence across reloads).
@@ -155,13 +155,19 @@ Replaces hardcoded SPECIALISTS array in `constants.ts`.
 *   **Integration:** Uses **native Supabase node** (not HTTP requests) for cleaner integration.
 *   **Logic Path:**
     1.  **Filter:** Ensures event is `checkout.session.completed`.
-    2.  **Extract:** Code node parses metadata (Customer Name, Email, Phone, Service, Date/Time).
-    3.  **Language Logic:** Priority 1: `metadata.language` from widget. Priority 2: Phone-based fallback.
-    4.  **Database:** Native Supabase node inserts record into `bookings` table. **(Single source of truth for writes)**
-    5.  **Email:** Sends confirmation email via Gmail (localized). **(PII allowed - sent to patient)**
-    6.  **Calendar:** Adds event to Google Calendar. **(GDPR Pseudonymized - no PII exposed)**
-*   **Fields Saved:** `customer_name`, `customer_email`, `customer_phone`, `service_id`, `service_name`, `start_time`, `end_time`, `status`, `amount_paid`
-*   **Outcome:** Booking saved in DB, Client notified, Calendar updated.
+    2.  **Extract:** Code node parses metadata (Customer Name, Email, Phone, Service, Date/Time). Extract `doctor_id` (if selected) and `service_id`.
+    3.  **Auto-Assignment Logic:**
+        -   IF `doctor_id` is null (Patient chose "Any Available Specialist"):
+            -   **Fetch Qualifiers:** Query `specialists` table for doctors whose `specialties` array contains the current `service_id`.
+            -   **Random Selection:** If multiple qualified doctors found, randomly select one for fair distribution.
+            -   **Assign:** Update booking data with selected `specialist_id` and `specialist_name`.
+        -   IF `doctor_id` is provided: Use the pre-selected specialist.
+    4.  **Language Logic:** Priority 1: `metadata.language` from widget. Priority 2: Phone-based fallback.
+    5.  **Database:** Native Supabase node inserts record into `bookings` table. **(Single source of truth for writes)**
+    6.  **Email:** Sends confirmation email via Gmail (localized). **Now includes assigned specialist name.**
+    7.  **Calendar:** Adds event to Google Calendar. Includes specialist name in description for staff internal view.
+*   **Fields Saved:** `customer_name`, `customer_email`, `customer_phone`, `service_id`, `service_name`, `start_time`, `end_time`, `status`, `amount_paid`, `language`, `cancellation_token`, `payment_intent_id`, `stripe_session_id`, `specialist_id`
+*   **Outcome:** Booking saved in DB with auto-assigned doctor, Client notified with doctor name, Calendar updated.
 *   **GDPR Compliance:** Calendar events show only `Vizīte BK-XXXXX` with link to secure dashboard. No patient names, emails, or phone numbers in calendar.
 *   **Error Handling:** All nodes use `onError: stopWorkflow` to trigger Error Trigger node.
 
@@ -173,7 +179,7 @@ Replaces hardcoded SPECIALISTS array in `constants.ts`.
 **Flow 1: Tomorrow's Appointment Reminders**
 1.  **Calculate:** Code node computes tomorrow's date range.
 2.  **Fetch:** Supabase node queries `bookings` where `status=confirmed` and `start_time` is tomorrow.
-3.  **Language Logic:** Code node determines LV/EN from `customer_phone`.
+3.  **Language Logic:** Priority 1: Stored `language` from booking record. Priority 2: Phone-based fallback (371 prefix → LV, else EN).
 4.  **Email:** Professional HTML templates with teal gradient header, appointment details card, Google Maps link.
 5.  **SMS:** Optional Twilio integration (requires client's Twilio number).
 *   **Outcome:** Patients reminded 24h in advance with beautiful branded emails.
@@ -217,7 +223,7 @@ Replaces hardcoded SPECIALISTS array in `constants.ts`.
     5.  **Email:** Professional HTML cancellation confirmation (localized) with refund status.
     6.  **Alert:** Telegram notification to clinic with cancellation details.
 *   **Refund Policy:** 
-    - **>24h before:** Full deposit refund (€20) processed via Stripe.
+    - **>24h before:** Full deposit refund (€30) processed via Stripe.
     - **<24h before:** No refund (deposit retained as no-show fee).
 *   **Outcome:** Patients can self-cancel; clinic is notified; refunds processed automatically.
 
@@ -291,7 +297,7 @@ Stripe retries: Up to 72 hours if n8n fails (webhook.js returns 502)
 ### 6.3 Error Handling (Dead Letter Queue)
 **Requirement:** Add Error Trigger node to n8n workflow to alert on failures.
 
-**Directive:** See `directives/n8n-error-alerting.md` for setup instructions.
+**Directive:** See `directives/n8n-dead-letter-queue.md` for DLQ setup and error monitoring.
 
 ### 6.4 Language Detection (Improved)
 **Previous:** Phone-based only (brittle for expats/roaming).
@@ -444,8 +450,181 @@ Payment → n8n → Save to Supabase
 1. Stored `language` from booking record
 2. Phone-based detection fallback (371 prefix → LV, else EN)
 
+### 6.11 Race Condition Prevention - Slot Locking (Added 2025-12-14)
 
----
+**Problem Solved:** Two users could book the same time slot if they both started checkout within seconds of each other.
+
+**Scenario Without Fix:**
+```
+10:00:00 - Patient A checks Monday 2pm → "Available ✅"
+10:00:01 - Patient B checks Monday 2pm → "Available ✅"
+10:00:15 - Patient A completes payment → Booking confirmed
+10:00:18 - Patient B completes payment → DOUBLE BOOKING! 💥
+```
+
+**Solution:** Atomic slot reservation with 5-minute timeout lock.
+
+**New Flow:**
+```
+User clicks "Pay" → /api/reserve-slot → Pending booking created (5-min lock)
+        ↓
+Slot now blocked from other users
+        ↓
+User completes Stripe checkout
+        ↓
+Webhook → n8n → confirm_booking() → Pending promoted to Confirmed
+```
+
+**If User B Tries Same Slot:**
+```
+User B clicks "Pay" → /api/reserve-slot → CONFLICT (slot locked)
+        ↓
+User sees: "This time slot is no longer available"
+```
+
+**Database Changes:**
+| Addition | Type | Purpose |
+|----------|------|---------|
+| `slot_lock_expires_at` | TIMESTAMPTZ | Expires 5 min after checkout start |
+| `reserve_slot()` | RPC Function | Atomic slot reservation |
+| `confirm_booking()` | RPC Function | Promote pending or insert new |
+| `cleanup_expired_locks()` | RPC Function | Delete expired pending bookings |
+
+**Migration:** Run `sql/add_slot_lock.sql` in Supabase SQL Editor.
+
+**Cloudflare Endpoints:**
+- `POST /api/reserve-slot` - Creates pending booking with lock
+- `POST /api/create-session` - Now includes `pending_booking_id` in metadata
+
+**Availability Check Updates:**
+- Edge Function and n8n now filter by `status IN ('confirmed', 'pending')` OR active locks
+
+### 6.12 Analytics & KPI Tracking (Added 2025-12-14)
+
+**Problem Solved:** No visibility into booking funnel performance, patient outcomes, or ROI metrics.
+
+**Research Basis:** Based on market research of dental practice management software standards in Latvia and Europe (Dentally, Dental Intelligence, Adit, moCal).
+
+**New Database Schema:**
+
+| Table/Column | Type | Purpose |
+|-------------|------|---------|
+| `booking_events` | TABLE | Funnel tracking (widget opens, step progression) |
+| `booking_events.session_id` | TEXT | Browser session UUID |
+| `booking_events.event_type` | TEXT | Event name (widget_open, step_1_service, etc.) |
+| `bookings.actual_status` | TEXT | completed/no_show/cancelled_late |
+| `bookings.review_requested_at` | TIMESTAMPTZ | When review email sent |
+| `bookings.review_completed_at` | TIMESTAMPTZ | When patient left review |
+| `bookings.source` | TEXT | widget/phone/walk-in |
+
+**Events Tracked:**
+| Event | When Fired |
+|-------|------------|
+| `widget_open` | User opens booking widget |
+| `step_1_service` | Selects a service |
+| `step_2_specialist` | Selects a specialist |
+| `step_3_datetime` | Selects date and time |
+| `step_4_details` | Enters patient details |
+| `step_5_payment` | Initiates payment |
+| `booking_complete` | Booking confirmed |
+| `language_change` | Changes language |
+
+**Pre-built Analytics Views:**
+- `analytics_monthly_summary` - Bookings, revenue, show rate, reviews per month
+- `analytics_funnel` - Daily funnel step counts
+- `analytics_top_services` - Top services by revenue
+
+**Monthly Report Workflow (`n8n-9-monthly-analytics.json`):**
+- **Trigger:** 1st of each month at 9AM
+- **Recipients:** Clinic + You (SaaS owner copy)
+- **Metrics Included:**
+  - Total bookings & revenue
+  - Show rate / no-show rate
+  - Unique patients vs returning patients
+  - Average booking lead time
+  - Top services by revenue
+  - Google reviews requested vs completed
+  - Funnel conversion rates
+
+**Files Added:**
+| File | Purpose |
+|------|---------|
+| `sql/analytics_migration.sql` | Database schema for tracking |
+| `hooks/useAnalytics.ts` | React hook with session management |
+| `functions/track-event/index.ts` | Cloudflare API endpoint |
+| `workflows/n8n-9-monthly-analytics.json` | Monthly report workflow |
+
+**Deployment:**
+1. Run `sql/analytics_migration.sql` in Supabase SQL Editor
+2. Deploy widget changes (`git push`)
+3. Import and activate n8n workflow
+
+### 6.13 Build Optimization & Configuration Fixes (Updated 2025-12-17)
+
+**Problem Solved:** Cloudflare Pages build failures due to:
+1. Large bundle size (584KB > 500KB warning limit)
+2. Missing output directory configuration
+3. Widget price display showing 0 instead of actual prices
+
+**Code Splitting (Vite):**
+Bundle reduced from 584KB to 317KB (45% reduction) via `manualChunks`:
+```typescript
+// vite.config.ts
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+        'vendor-supabase': ['@supabase/supabase-js'],
+        'vendor-utils': ['date-fns', 'clsx', 'tailwind-merge'],
+        'vendor-icons': ['lucide-react'],
+      }
+    }
+  }
+}
+```
+
+**Cloudflare Pages Configuration:**
+Added `wrangler.toml` at repo root pointing to nested widget output:
+```toml
+name = "butkevica-dental-booking"
+pages_build_output_dir = "src/widget/butkevica-dental-booking/dist"
+compatibility_date = "2025-11-01"
+```
+
+**Build Script Updates:**
+```json
+// package.json (root)
+"build": "cd src/widget/butkevica-dental-booking && npm install && npm run build && cp -r functions dist/"
+```
+
+**Price Display Fix:**
+Database stores prices in `price_cents` (4500 = €45.00) but widget expected `price`. Fixed in `configService.ts`:
+```typescript
+// Before (broken):
+price: row.price
+
+// After (fixed):
+price: row.price_cents / 100
+```
+
+**Cloudflare Environment Variables Required:**
+| Variable | Value |
+|----------|-------|
+| `VITE_SUPABASE_URL` | `https://[PROJECT_ID].supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
+
+> ⚠️ These must be set in Cloudflare Pages dashboard → Settings → Environment variables, then redeploy.
+
+**Files Changed:**
+| File | Change |
+|------|--------|
+| `vite.config.ts` | Added code splitting |
+| `wrangler.toml` (root) | NEW: Cloudflare Pages config |
+| `package.json` (root) | Updated build script |
+| `services/configService.ts` | Fixed price conversion |
+
+
 
 ## 7. Required n8n VPS Configuration
 
@@ -468,15 +647,23 @@ See `directives/n8n-gdpr-execution-logs.md` for full instructions.
 ```
 butkeviča-dental-booking/
 ├── sql/                          # Database scripts
+│   ├── add_cancellation_columns.sql
+│   ├── add_slot_lock.sql
+│   ├── analytics_migration.sql     # NEW: Analytics schema
+│   ├── debug_booking_inserts.sql
 │   ├── debug_bookings.sql
 │   ├── fix_admin_permissions.sql
+│   ├── fix_booking_columns.sql
 │   ├── fix_services_data.sql
 │   ├── fix_widget_supabase_insert.sql
 │   ├── insert_test_bookings.sql
+│   ├── saas_migration.sql
 │   ├── smart_recall_query.sql
 │   ├── supabase_security.sql
-│   └── update_bookings_schema.sql
+│   ├── update_bookings_schema.sql
+│   └── update_service_categories.sql
 ├── docs/                         # Documentation
+│   ├── BUSINESS_BLUEPRINT.md
 │   ├── DIRECTIVE.md
 │   ├── README.md
 │   └── VERIFICATION.md
@@ -485,13 +672,232 @@ butkeviča-dental-booking/
 │   ├── n8n-4-check-availability.json            # Deprecated (Edge Function primary)
 │   ├── n8n-5-google-review-request.json         # Post-appointment reviews
 │   ├── n8n-7-daily-reminders-and-recall.json    # Reminders + 6-month recall
-│   └── n8n-8-cancellation.json                  # Self-service cancellations
+│   ├── n8n-8-cancellation.json                  # Self-service cancellations
+│   └── n8n-9-monthly-analytics.json             # NEW: Monthly analytics reports
 ├── public/                       # Static pages
-│   └── cancel-booking.html       # Cancellation page (tri-lingual)
+│   ├── booking-cancelled.html    # Cancellation confirmation page
+│   ├── booking-success.html      # Success redirect page
+│   └── cancel-booking.html       # Cancellation request page (tri-lingual)
 ├── components/                   # React components
 │   └── dashboard/                # Admin dashboard
 ├── services/                     # API service layers
 ├── hooks/                        # Custom React hooks
+│   ├── useConfig.ts
+│   └── useAnalytics.ts           # NEW: Analytics tracking hook
 ├── functions/                    # Cloudflare Functions
+│   ├── create-session/
+│   ├── reserve-slot/
+│   ├── track-event/              # NEW: Analytics event endpoint
+│   └── webhook/
 └── [source files]                # App.tsx, index.tsx, etc.
 ```
+### 6.14 Automatic Doctor Assignment (Added 2025-12-18)
+
+**Problem Solved:** Patients who select "Any Available Specialist" remained unassigned in the database, requiring manual intervention from clinic staff.
+
+**Solution:** Server-side automated assignment based on service qualification.
+
+**The Logic:**
+1.  **Qualification Check:** The system uses the `specialties` column (text array) in the `specialists` table to filter doctors capable of performing the booked service.
+2.  **Clinic Isolation:** Only specialists belonging to the specific `clinic_id` of the booking are considered.
+3.  **Fair Distribution (Randomization):** If multiple specialists are qualified for a service, the system selects one at random. This ensures a fair workload distribution among doctors.
+4.  **Metadata Enhancement:**
+    -   Widget passes `service_id` and `duration` (min) to Stripe metadata.
+    -   n8n extracts these to perform the lookup.
+5.  **Graceful Fallback:** If no specialists are found matching the service, the booking proceeds without a specialist assigned (staying null), and an alert is logged for manual review.
+
+**Technical Implementation:**
+-   **n8n Node:** `Fetch Qualified Specialists` (Supabase node using PostgREST array containment filter `cs.{service_id}`).
+-   **n8n Code Node:** `Auto-Assign Specialist` (Random selection logic + consolidated email generation).
+-   **Database:** `specialist_id` column added to `bookings` for persistent tracking.
+
+### 6.15 Multi-Tenant Dynamic Branding (Added 2025-12-22)
+
+**Problem Solved:** Hardcoded branding (clinic name, email, logo) prevented onboarding new clinics without code changes. The `check-availability` Edge Function also lacked `clinic_id` filtering, causing cross-tenant data leakage.
+
+**Solution:** Dynamic branding fetched from database + true multi-tenant isolation.
+
+**Database Changes:**
+| Column | Type | Purpose |
+|--------|------|---------|
+| `clinics.logo_url` | TEXT | Clinic logo URL (optional, fallback to initials) |
+| `clinics.clinic_email` | TEXT | Clinic contact email for workflows |
+
+**Migration:** Run `sql/add_branding_columns.sql` in Supabase SQL Editor.
+
+**Frontend Changes:**
+| File | Change |
+|------|--------|
+| `types.ts` | Added `Clinic` interface with `logoUrl`, `clinicEmail`, `theme`, `settings` |
+| `services/configService.ts` | Added `fetchClinicDetails()` to fetch clinic metadata from Supabase |
+| `hooks/useConfig.tsx` | Exposed `clinic` object globally via React Context |
+| `constants.ts` | Added `DEFAULT_CLINIC` fallback for network failures |
+
+**Backend Changes (Critical Fix):**
+| File | Change |
+|------|--------|
+| `supabase/functions/check-availability/index.ts` | Added `.eq('clinic_id', clinicId)` filter to Supabase query. **This fixes cross-tenant data leakage.** |
+| `workflows/n8n-2-stripe-confirmation-supabase.json` | Now uses `metadata.clinic_email` with fallback to hardcoded value |
+
+**Flow After Refactor:**
+```
+Widget Mount → fetchAllConfig(clinicId)
+                    ↓
+Supabase: SELECT * FROM clinics WHERE id = 'butkevica'
+                    ↓
+ConfigContext: { clinic: { name, logoUrl, clinicEmail, ... } }
+                    ↓
+Header.tsx: Shows clinic.name instead of hardcoded "Butkeviča"
+PaymentMock.tsx: Passes clinic_email to Stripe metadata
+                    ↓
+n8n: Uses metadata.clinic_email for confirmation emails
+```
+
+**Onboarding a New Clinic:**
+1. Insert new row in `clinics` table with unique `id`, `name`, `clinic_email`
+2. Insert services in `services` table with matching `clinic_id`
+3. Insert specialists in `specialists` table with matching `clinic_id`
+4. Widget auto-fetches correct branding based on `clinicId` prop
+
+**Verification:**
+- ✅ Changing `clinics.name` in DB instantly updates widget header
+- ✅ Currency symbol displays correctly from `clinic.settings.currency`
+- ✅ Confirmation emails use `clinic_email` from metadata
+- ✅ Availability check only returns slots for the specific clinic
+
+### 6.16 Super Admin Dashboard (Added 2025-12-22)
+
+**Problem Solved:** Onboarding new clinics required manual SQL inserts, making it error-prone and inaccessible to non-technical users.
+
+**Solution:** A dedicated Super Admin Dashboard at `/super-admin` route for platform owners.
+
+**Database Changes:**
+| Table/Column | Type | Purpose |
+|-------------|------|---------|
+| `super_admin_whitelist` | TABLE | Email whitelist for super admin access |
+| `super_admin_whitelist.email` | TEXT (PK) | Whitelisted email address |
+| `super_admin_whitelist.is_active` | BOOLEAN | Enable/disable without deletion |
+| `clinics.is_active` | BOOLEAN | Toggle clinic visibility |
+| `clinics.created_by` | TEXT | Audit: who created the clinic |
+
+**Migration:** Run `sql/04_super_admin.sql` in Supabase SQL Editor.
+
+**Features:**
+| Feature | Description |
+|---------|-------------|
+| Platform Stats | Total clinics, bookings, monthly revenue, unique patients |
+| Clinic List | View all clinics with status, services/specialists counts |
+| Create Clinic | Form with auto-slug generation, color picker, timezone |
+| Edit Clinic | Update branding, email, domain settings |
+| Toggle Status | Activate/deactivate clinics |
+| Template Copying | Copy services & specialists from existing clinic |
+| Deploy Instructions | Step-by-step Cloudflare Pages setup after creation |
+
+**Authentication:**
+- Separate from clinic staff roles (admin/doctor)
+- Email-based whitelist in `super_admin_whitelist` table
+- Access denied page for non-super-admins
+
+**Files Added:**
+| File | Purpose |
+|------|---------|
+| `sql/04_super_admin.sql` | Database migration |
+| `components/auth/SuperAdminRoute.tsx` | Protected route guard |
+| `components/super-admin/SuperAdminLayout.tsx` | Layout with sidebar |
+| `components/super-admin/SuperAdminSidebar.tsx` | Navigation sidebar |
+| `components/super-admin/SuperAdminDashboard.tsx` | Platform stats page |
+| `components/super-admin/ClinicsPage.tsx` | Clinic CRUD interface |
+| `components/super-admin/ClinicFormModal.tsx` | Add/edit clinic form |
+
+**New Clinic Onboarding Flow (via UI):**
+1. Navigate to `/super-admin/clinics`
+2. Click "Add New Clinic"
+3. Fill form (name auto-generates slug)
+4. Optional: Select template clinic to copy services
+5. Click "Create Clinic"
+6. Follow deployment instructions for Cloudflare Pages
+
+### 6.17 RLS Performance & Security Fixes (Updated 2025-12-23)
+
+**Problem Solved:** Supabase performance advisor flagged multiple issues:
+- `auth_rls_initplan` warnings (inefficient `auth.uid()` calls in RLS)
+- `multiple_permissive_policies` causing policy conflicts
+- `Function Search Path Mutable` security warning
+
+**Fixes Applied:**
+| Fix | Before | After |
+|-----|--------|-------|
+| Auth function wrapping | `auth.uid()` | `(SELECT auth.uid())` (subquery optimization) |
+| Policy consolidation | Multiple permissive policies per table | Single comprehensive policy per operation |
+| Function security | Mutable search path | `SET search_path = ''` on all RPC functions |
+
+**Files Changed:**
+| File | Purpose |
+|------|---------|
+| `sql/10_fix_rls_performance.sql` | RLS policy optimization |
+| `sql/11_fix_remaining_rls_issues.sql` | Additional policy fixes |
+| `sql/09_fix_search_path.sql` | Updated `reserve_slot` and `confirm_booking` with fixed search path |
+
+**Verification:**
+- ✅ Supabase performance advisor warnings resolved
+- ✅ RLS policies correctly isolate clinic data
+- ✅ No authenticated bypass vulnerabilities
+
+### 6.18 Multi-Specialist Capacity Scheduling (Updated 2025-12-24)
+
+**Problem Solved:** When 2+ specialists could perform the same service, booking one would mark the entire time slot as unavailable. This prevented optimal resource utilization.
+
+**Example Before (Broken):**
+```
+Service "Zobu ārstēšana" → Dr. A and Dr. B both qualified
+Patient 1 books 10:00 → assigned to Dr. A
+Patient 2 tries 10:00 → ❌ "Slot unavailable" (wrong!)
+```
+
+**Example After (Fixed):**
+```
+Patient 1 books 10:00 → assigned to Dr. A
+Patient 2 books 10:00 → ✅ Slot still available → assigned to Dr. B
+Patient 3 tries 10:00 → ❌ "Slot unavailable" (correct - both doctors booked)
+```
+
+**Technical Solution:**
+1. **Capacity Check:** Count qualified specialists for the selected service
+2. **Booking Count:** Count existing bookings at the requested time
+3. **Availability Rule:** `slot_available = (bookings < qualified_specialists)`
+
+**Files Changed:**
+| File | Change |
+|------|--------|
+| `supabase/functions/check-availability/index.ts` | Fetches qualified specialists, compares to booking count |
+| `sql/12_multi_specialist_capacity.sql` | Updated `reserve_slot` RPC with capacity logic |
+| `services/api.ts` | Added `service_id` parameter to availability functions |
+| `components/SpecialistSelection.tsx` | Passes `service_id` for accurate capacity check |
+
+**Deployment:**
+1. Run `sql/12_multi_specialist_capacity.sql` in Supabase SQL Editor
+2. Deploy Edge Function: `supabase functions deploy check-availability`
+
+**n8n Workflow Improvements (2025-12-24):**
+| Fix | Description |
+|-----|-------------|
+| Update Pending Booking | Changed from `rowId` to `filterString` syntax (fixes "select condition" error) |
+| Specialist Auto-Assignment | Added `Fetch Qualified Specialists` + random selection node |
+| Deduplication | Added `Check Existing Booking` before INSERT (prevents duplicate key errors) |
+| Timestamp Fix | Removed empty string for `slot_lock_expires_at` (caused PostgreSQL error) |
+
+**Workflow File:** `workflows/n8n-2-stripe-confirmation-supabase.json`
+
+**Flow Structure:**
+```
+Webhook → Filter Event → Extract Data → Fetch Specialists → Auto-Assign
+                                                               ↓
+                                                    Has Pending Booking?
+                                            ┌──────────────┴──────────────┐
+                                          [YES]                          [NO]
+                                            ↓                              ↓
+                                   Update Pending             Check Duplicate → Create
+                                            ↓                              ↓
+                                   Email + Calendar            Email + Calendar
+```
+

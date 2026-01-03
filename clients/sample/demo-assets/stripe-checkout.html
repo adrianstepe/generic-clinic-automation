@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Checkout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f7f9fa;
+            /* Stripe-ish light gray */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #30313d;
+        }
+
+        .container {
+            display: flex;
+            width: 900px;
+            height: 600px;
+            background: white;
+            box-shadow: 0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            flex: 1;
+            padding: 40px;
+            border-right: 1px solid #e6e6e6;
+        }
+
+        .right-panel {
+            flex: 1;
+            padding: 40px;
+            background-color: #fcfcfc;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .company-name {
+            font-weight: 600;
+            color: #6a7c93;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .price-large {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .price-subtitle {
+            color: #6a7c93;
+            margin-bottom: 40px;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #30313d;
+        }
+
+        .input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e6ebf1;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: white;
+            transition: box-shadow 0.2s;
+        }
+
+        .input:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+            /* Stripe-like focus ring */
+            border-color: #aab7c4;
+        }
+
+        .pay-button {
+            background-color: #0073e6;
+            /* Stripe standard blue or slightly custom */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .pay-button:hover {
+            background-color: #005bb5;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .card-element {
+            border: 1px solid #e6ebf1;
+            padding: 12px;
+            border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            background: white;
+            align-items: center;
+        }
+
+        .card-icon {
+            width: 30px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="left-panel">
+            <div class="company-name">
+                <div style="width:24px; height:24px; background:#0d9488; border-radius:4px;"></div>
+                Dental Clinic
+            </div>
+            <div class="price-large">€30.00</div>
+            <div class="price-subtitle">Due today</div>
+
+            <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                <div class="product-item">
+                    <span>Reservation Deposit</span>
+                    <span>€30.00</span>
+                </div>
+                <div class="product-item" style="color:#6a7c93; font-size:12px;">
+                    <span>Total due at clinic</span>
+                    <span>€35.00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <h3>Pay with card</h3>
+
+            <div class="input-group">
+                <label class="label">Email</label>
+                <input type="email" class="input" value="janis@example.com">
+            </div>
+
+            <div class="input-group">
+                <label class="label">Card information</label>
+                <div class="card-element">
+                    <span style="font-size:14px;">💳</span>
+                    <input type="text" placeholder="1234 1234 1234 1234" style="border:none; outline:none; flex:1;"
+                        value="4242 4242 4242 4242">
+                    <input type="text" placeholder="MM / YY" style="border:none; outline:none; width:60px;"
+                        value="12 / 25">
+                    <input type="text" placeholder="CVC" style="border:none; outline:none; width:40px;" value="123">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="label">Name on card</label>
+                <input type="text" class="input" value="Janis Berzins">
+            </div>
+
+            <button class="pay-button" id="payBtn" onclick="pay()">
+                <span id="btnText">Pay €30.00</span>
+                <div class="spinner" id="spinner"></div>
+            </button>
+
+            <div style="text-align:center; margin-top:10px; font-size:12px; color:#6a7c93;">
+                <span style="display:inline-block; vertical-align:middle;">Powered by <strong>Stripe</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function pay() {
+            const btn = document.getElementById('payBtn');
+            const text = document.getElementById('btnText');
+            const spinner = document.getElementById('spinner');
+
+            text.style.display = 'none';
+            spinner.style.display = 'block';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+
+            // Simulate 2s processing then redirect back to app success
+            setTimeout(() => {
+                // Redirect to the local app with success param
+                window.location.href = 'http://localhost:3000/?success=1';
+            }, 1500);
+        }
+    </script>
+
+</body>
+
+</html>

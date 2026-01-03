@@ -19,19 +19,28 @@ const BookingWidget: React.FC = () => {
     const STORAGE_KEY = `${clinicId}_booking_state`;
 
     const [booking, setBooking] = useState<BookingState>(() => {
-        // Lazy Initialization: Synchronously read from localStorage to prevent race conditions
+        // Check for reset flag immediately
         if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    // Restore Date object
-                    if (parsed.selectedDate) {
-                        parsed.selectedDate = new Date(parsed.selectedDate);
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('reset') === 'true') {
+                sessionStorage.removeItem(STORAGE_KEY);
+                // clear the query param without reload if possible, or just ignore it implies we start fresh
+                // We will return default state below.
+            } else {
+                // Only try to load if NOT resetting
+                // Use sessionStorage so state clears when tab is closed but persists during Stripe redirect
+                const saved = sessionStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        // Restore Date object
+                        if (parsed.selectedDate) {
+                            parsed.selectedDate = new Date(parsed.selectedDate);
+                        }
+                        return parsed;
+                    } catch (e) {
+                        console.error("Failed to parse saved booking state", e);
                     }
-                    return parsed;
-                } catch (e) {
-                    console.error("Failed to parse saved booking state", e);
                 }
             }
         }
@@ -73,9 +82,16 @@ const BookingWidget: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [booking.step]);
 
-    // Persist state to localStorage to handle redirect flows (like Stripe)
+    // Persist state to sessionStorage to handle redirect flows (like Stripe)
+    // sessionStorage clears when tab is closed, but persists during redirects
+    // Don't persist step 5 (confirmation) - booking is complete, allow fresh start
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(booking));
+        if (booking.step === 5) {
+            // Booking complete - clear storage so user can book again
+            sessionStorage.removeItem(STORAGE_KEY);
+        } else {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(booking));
+        }
     }, [booking, STORAGE_KEY]);
 
     // Check for success return from Payment provider
@@ -85,6 +101,10 @@ const BookingWidget: React.FC = () => {
             // State is already loaded via lazy init, just advance step
             setBooking(prev => ({ ...prev, step: 5 }));
             trackBookingComplete();
+
+            // Clear the success parameter from URL to prevent showing confirmation on refresh/reopen
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
         }
     }, [trackBookingComplete]);
 
@@ -264,8 +284,8 @@ const BookingWidget: React.FC = () => {
             </main>
 
             {/* Hidden Link for You to Click */}
-            <div className="fixed bottom-2 right-2 opacity-50 hover:opacity-100 z-50">
-                <a href="/login" className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded shadow-sm">Admin</a>
+            <div className="fixed bottom-2 right-2 opacity-30 hover:opacity-100 z-50 transition-opacity">
+                <a href="/login" className="text-xs text-gray-500 dark:text-slate-600 bg-gray-200 dark:bg-slate-800 px-2 py-1 rounded shadow-sm dark:shadow-none border dark:border-slate-700">Admin</a>
             </div>
         </div>
     );

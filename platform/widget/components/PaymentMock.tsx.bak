@@ -108,17 +108,18 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
       // Determine a safe Base URL
       const getBaseUrl = () => {
         if (typeof window !== 'undefined') {
-          return window.location.origin;
+          return window.location.origin + window.location.pathname;
         }
-        return '';
+        return ''; // No fallback to external domains
       };
 
       const baseUrl = getBaseUrl();
-      const successUrl = `${baseUrl}/?success=1`;
-      const cancelUrl = `${baseUrl}/?cancel=1`;
+      const successUrl = `${baseUrl}?success=1`;
+      const cancelUrl = `${baseUrl}?cancel=1`;
 
       // 1. Format the date to ISO string (YYYY-MM-DD) using LOCAL date components
       // CRITICAL: Do NOT use toISOString() as it converts to UTC, shifting dates backwards
+      // for timezones ahead of UTC (e.g., user selects Dec 22 in UTC+2, toISOString gives Dec 21)
       let isoDate = '';
       if (booking.selectedDate) {
         const d = new Date(booking.selectedDate);
@@ -129,11 +130,13 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
       }
 
       // 2. Format start and end times for slot reservation
+      // Use string manipulation to avoid timezone conversion issues
       const startTimeIso = booking.selectedDate && booking.selectedTime
         ? `${isoDate}T${booking.selectedTime}:00`
         : null;
 
-      // Calculate end time
+      // Calculate end time by adding service duration (default 60 minutes)
+      // Using string manipulation to avoid Date object timezone conversion
       let endTimeIso: string | null = null;
       if (startTimeIso && booking.selectedTime) {
         const [hours, minutes] = booking.selectedTime.split(':').map(Number);
@@ -146,34 +149,36 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
       }
 
       // 3. SLOT LOCK: Reserve the slot atomically BEFORE creating Stripe session
+      // This prevents race conditions where two users book the same slot
       let pendingBookingId: string | null = null;
 
       if (startTimeIso && endTimeIso) {
-        // Use configured URL or derive from API_URL
-        // Default to same origin /api/reserve-slot if not set
-        const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/create-session', '') : '/api';
-        const reserveApiUrl = import.meta.env.VITE_RESERVE_SLOT_URL || `${apiBase}/reserve-slot`;
+        const reserveApiUrl = import.meta.env.VITE_RESERVE_SLOT_URL ||
+          (import.meta.env.VITE_API_URL?.replace('/api/create-session', '/api/reserve-slot') ||
+            'https://test1-3oj.pages.dev/api/reserve-slot');
 
         try {
           const reserveResponse = await fetch(reserveApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            mode: 'cors',
             body: JSON.stringify({
-              clinic_id: clinicId,
+              clinic_id: clinicId, // SaaS: Identify clinic
               start_time: startTimeIso,
               end_time: endTimeIso,
               customer_email: booking.patientData.email,
               customer_name: `${booking.patientData.firstName} ${booking.patientData.lastName}`,
-              customer_phone: booking.patientData.phone,
+              customer_phone: booking.patientData.phone, // Pass phone number for database
               service_id: service.id,
               service_name: service.name[booking.language] || service.name[Language.EN],
-              cf_turnstile_token: turnstileToken
+              cf_turnstile_token: turnstileToken // CAPTCHA token for bot protection
             })
           });
 
           const reserveData = await reserveResponse.json();
 
           if (!reserveResponse.ok || !reserveData.success) {
+            // Slot is already taken - show user-friendly error
             const slotTakenMessages = {
               [Language.EN]: 'This time slot is no longer available. Please select a different time.',
               [Language.LV]: 'Šis laika slots vairs nav pieejams. Lūdzu, izvēlieties citu laiku.',
@@ -187,27 +192,26 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
           pendingBookingId = reserveData.pending_booking_id;
           console.log('[SlotLock] Slot reserved:', pendingBookingId);
         } catch (reserveError: any) {
-          // If it's a slot-taken error, re-throw it so user knows
-          if (reserveError.message && (
-            reserveError.message.includes('longer available') ||
+          // If it's a slot-taken error, re-throw it
+          if (reserveError.message.includes('no longer available') ||
             reserveError.message.includes('nav pieejams') ||
-            reserveError.message.includes('недоступно')
-          )) {
+            reserveError.message.includes('недоступно')) {
             throw reserveError;
           }
-          // Otherwise log warning but allow payment to proceed (soft fail)
-          console.warn('[SlotLock] Reservation warning:', reserveError);
+          // For other errors (network issues), log and continue without slot lock
+          // This maintains backward compatibility if the endpoint isn't deployed yet
+          console.warn('[SlotLock] Reserve-slot failed, continuing without lock:', reserveError);
         }
       }
 
       // 4. Call Backend to create Checkout Session
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/create-session';
-
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://stripe-mvp-proxy.adriansbusinessw.workers.dev/';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
+        mode: 'cors',
         body: JSON.stringify({
           amount: amountInCents,
           service: service.name[Language.EN],
@@ -219,17 +223,20 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
             phone: booking.patientData.phone
           },
           booking: {
+            // UPDATED: Send the clean ISO date string
             date: isoDate,
             time: booking.selectedTime,
             serviceId: service.id,
+            // OPTIONAL: Pass the translated service name for the Calendar Event Title
             serviceName: service.name[booking.language] || service.name[Language.EN],
             language: booking.language,
             duration: service.durationMinutes || 60,
             doctor_id: booking.selectedSpecialist?.id || null,
             doctor_name: booking.selectedSpecialist?.name || null,
+            // SLOT LOCK: Pass pending booking ID so n8n can promote to confirmed
             pending_booking_id: pendingBookingId,
-            clinic_id: clinicId,
-            clinic_email: clinic.clinicEmail
+            clinic_id: clinicId, // SaaS: Identify clinic
+            clinic_email: clinic.clinicEmail // SaaS: Email for notifications
           }
         })
       });
@@ -239,11 +246,11 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
         let errorMessage = response.statusText;
         try {
           const errJson = JSON.parse(errText);
-          errorMessage = errJson.error || errorMessage;
+          errorMessage = errJson.error || response.statusText;
         } catch (e) {
-          errorMessage = errText || errorMessage;
+          errorMessage = errText || response.statusText;
         }
-        throw new Error(`Payment Error: ${errorMessage}`);
+        throw new Error(`Server Error: ${errorMessage}`);
       }
 
       const data = await response.json();
@@ -256,22 +263,24 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
         throw new Error("Invalid response from payment server (no checkout URL).");
       }
 
-      console.log("Payment URL received:", data.url);
+      console.log("Payment URL received:", data.url); // Debug log
 
-      // 5. Redirect to Stripe
+      // 5. Direct Redirect
+      // We try to set window.location.href. 
+      // If this is blocked (e.g. by sandbox permissions), we catch the error 
+      // and show a manual button instead.
       try {
         window.location.href = data.url;
       } catch (navigationError: any) {
         console.warn("Auto-redirect blocked. Falling back to manual link.", navigationError);
         setPaymentUrl(data.url);
-        setLoading(false);
+        setLoading(false); // Stop loading to show the link
       }
 
     } catch (err: any) {
       console.error("Payment initiation failed:", err);
-      // Improve error message for network failures (common in dev/cors)
       if (err.message === 'Failed to fetch') {
-        setErrorMsg("Network Error: Could not connect to payment server. Check your internet or try again.");
+        setErrorMsg("Network Error: Could not connect to the payment server. Please ensure the Cloudflare Worker URL is correct and deployed.");
       } else {
         setErrorMsg(err.message || "An unexpected error occurred. Please try again.");
       }

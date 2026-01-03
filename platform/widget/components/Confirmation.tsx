@@ -1,6 +1,6 @@
 import React from 'react';
 import { Language, BookingState } from '../types';
-import { useTexts } from '../hooks/useConfig';
+import { useTexts, useConfig } from '../hooks/useConfig';
 // REMOVED: saveBookingToSupabase import - n8n webhook is now the single source of truth
 // This fixes the dual-write race condition that could cause duplicate entries
 
@@ -11,6 +11,7 @@ interface ConfirmationProps {
 
 const Confirmation: React.FC<ConfirmationProps> = ({ language, booking }) => {
   const texts = useTexts();
+  const { clinicId } = useConfig();
 
   // ARCHITECTURE NOTE:
   // The frontend does NOT write to the database anymore.
@@ -22,11 +23,16 @@ const Confirmation: React.FC<ConfirmationProps> = ({ language, booking }) => {
   // The webhook.js correctly returns 502 if n8n fails, so Stripe will retry for 72h.
 
   React.useEffect(() => {
-    // Clear localStorage booking state after successful payment redirect
+    // Clear sessionStorage booking state after successful payment redirect
     // The booking is now handled entirely by the Stripe webhook -> n8n flow
     console.log('[Confirmation] Payment successful - booking will be saved via Stripe webhook -> n8n');
+    // Clear the clinic-specific booking state so user can book again
+    const storageKey = `${clinicId}_booking_state`;
+    sessionStorage.removeItem(storageKey);
+    // Also clear legacy keys for backwards compatibility
+    sessionStorage.removeItem('butkevicaBookingState');
     localStorage.removeItem('butkevicaBookingState');
-  }, []);
+  }, [clinicId]);
 
   const getEventDetails = () => {
     if (!booking.selectedDate || !booking.selectedTime || !booking.selectedService) return null;

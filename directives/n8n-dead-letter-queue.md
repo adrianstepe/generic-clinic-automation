@@ -3,48 +3,53 @@
 ## Purpose
 Ensures **zero lost bookings** by capturing failed database writes to a local file system. Even in total Supabase outage, patient payment data is preserved for manual recovery.
 
-## Sales Pitch
-> *"Our system includes a **Black Box Recorder**. Even in a total server outage, no patient payment is ever lost. Failed transactions are automatically queued locally and recovered when systems are restored."*
+> *"Our system includes a **Black Box Recorder**. Even in a total server outage, no patient payment is ever lost."*
 
 ---
 
-## Architecture
+## ⚠️ n8n 2.0 Breaking Changes
 
-```
-Stripe Webhook → n8n Workflow
-                    ↓
-            Extract Booking Data
-                    ↓
-            Save to Supabase ←──── onError: stopWorkflow
-                    │
-           ┌───────┴───────┐
-           ↓               ↓
-       [SUCCESS]       [FAILURE]
-           ↓               ↓
-     Send Email      Error Trigger
-           ↓               ↓
-    Add to Calendar   Save to DLQ (/home/n8n/dlq/)
-                           ↓
-                    Alert Admin (Telegram)
-```
+**ExecuteCommand node is DISABLED by default in n8n 2.0** for security reasons.
+**File operations are RESTRICTED by default** - requires `N8N_RESTRICT_FILE_ACCESS_TO` env var.
+
+### Solution: Use the n8n 2.0 Compatible Workflow
+Use workflow: `workflows/n8n-dlq-error-handler-v2.json`
+This uses Code + Convert to File + Read/Write File nodes instead of ExecuteCommand.
 
 ---
 
-## VPS Setup (Run Once)
+## VPS Setup (Hostinger KVM 2 with Docker n8n)
 
+### 1. Create DLQ directory on host
 ```bash
-# SSH into your n8n VPS
-ssh root@your-vps-ip
-
-# Create DLQ directory with proper permissions
-mkdir -p /home/n8n/dlq/processed
-chown -R n8n:n8n /home/n8n/dlq
-chmod 755 /home/n8n/dlq
-
-# Verify n8n can write to it
-sudo -u n8n touch /home/n8n/dlq/test.txt && rm /home/n8n/dlq/test.txt
-echo "DLQ directory ready!"
+mkdir -p /local-files/dlq
+chmod 777 /local-files/dlq
 ```
+
+### 2. Add environment variable to docker-compose.yml
+```bash
+nano /docker/n8n/docker-compose.yml
+```
+
+Add this line to the n8n service's `environment:` section:
+```yaml
+      - N8N_RESTRICT_FILE_ACCESS_TO=/files
+```
+
+### 3. Restart n8n
+```bash
+cd /docker/n8n
+docker compose down
+docker compose up -d
+```
+
+### 4. Verify
+```bash
+docker ps | grep n8n
+docker exec n8n-n8n-1 touch /files/dlq/test.txt && docker exec n8n-n8n-1 rm /files/dlq/test.txt && echo "✅ DLQ ready!"
+```
+
+**DLQ files save to:** `/local-files/dlq/` on host (accessible as `/files/dlq/` from n8n)
 
 ---
 

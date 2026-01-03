@@ -1,0 +1,132 @@
+{
+    "name": "DLQ Error Handler (n8n 2.0)",
+    "nodes": [
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                -1296,
+                224
+            ],
+            "id": "a2c7d098-e98e-4d07-8cc1-45b3da62f304",
+            "name": "Error Trigger"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Prepare DLQ data structure\nconst errorData = $input.first().json;\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    error: {\n      message: errorData.error?.message || errorData.message || 'Unknown error',\n      node: errorData.error?.node?.name || 'Unknown',\n      stack: errorData.error?.stack || null\n    },\n    workflow: {\n      id: $workflow.id,\n      name: $workflow.name\n    },\n    original_data: errorData,\n    recovery_attempts: 0\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -1072,
+                224
+            ],
+            "id": "prepare-dlq-data",
+            "name": "Prepare DLQ Data"
+        },
+        {
+            "parameters": {
+                "mode": "jsonToBinary",
+                "options": {
+                    "fileName": "={{ 'failed-' + $now.format('yyyyMMdd-HHmmss') + '.json' }}"
+                }
+            },
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1.1,
+            "position": [
+                -848,
+                224
+            ],
+            "id": "convert-to-file-node",
+            "name": "Convert to File"
+        },
+        {
+            "parameters": {
+                "operation": "write",
+                "fileName": "={{ '/files/dlq/failed-' + $now.format('yyyyMMdd-HHmmss') + '.json' }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.readWriteFile",
+            "typeVersion": 1,
+            "position": [
+                -624,
+                224
+            ],
+            "id": "write-file-node",
+            "name": "Save to DLQ"
+        },
+        {
+            "parameters": {
+                "chatId": "7408240811",
+                "text": "=🚨 BOOKING FAILED - DLQ ACTIVATED!\n\nWorkflow: {{ $workflow.name }}\nError: {{ $('Error Trigger').first().json.error?.message || $('Error Trigger').first().json.message || 'Unknown' }}\nNode: {{ $('Error Trigger').first().json.error?.node?.name || 'Unknown' }}\nTime: {{ $now.format('yyyy-MM-dd HH:mm:ss') }}\n\n📁 Saved to DLQ folder\n\n⚠️ Check n8n immediately!",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                -400,
+                224
+            ],
+            "id": "e272dc8e-108a-4113-a873-57303bd7cd78",
+            "name": "Send Telegram Alert",
+            "credentials": {
+                "telegramApi": {
+                    "id": "O3M9P0psuAlOvjZg",
+                    "name": "Telegram account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Error Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare DLQ Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare DLQ Data": {
+            "main": [
+                [
+                    {
+                        "node": "Convert to File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Convert to File": {
+            "main": [
+                [
+                    {
+                        "node": "Save to DLQ",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save to DLQ": {
+            "main": [
+                [
+                    {
+                        "node": "Send Telegram Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "edb1e678c20bb2dc211861028fa5a0da62086103c19f921423bcdc604ef1f332"
+    }
+}

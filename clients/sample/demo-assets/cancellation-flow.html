@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancel Appointment | Butkeviča Dental</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Copied and simplified styles from the original cancel-booking.html */
+        :root {
+            --primary: #0d9488;
+            --danger: #dc2626;
+            --danger-dark: #b91c1c;
+            --success: #16a34a;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-800: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--gray-800);
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .booking-card {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row .label {
+            color: var(--gray-600);
+            font-size: 13px;
+            margin-left: 10px;
+        }
+
+        .info-row .value {
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            transition: background 0.2s;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-dark);
+        }
+
+        .result {
+            display: none;
+            text-align: center;
+            padding: 40px 24px;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .refund-status {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Main Form -->
+        <div id="mainContent">
+            <div class="header">
+                <h1>Cancel Appointment</h1>
+                <p>Butkeviča Dental Practice</p>
+            </div>
+            <div class="content">
+                <div class="booking-card">
+                    <h3 style="font-size:12px; color:#555; text-transform:uppercase; margin-bottom:10px;">Appointment
+                        Details</h3>
+                    <div class="info-row">
+                        <span>📅</span> <span class="label">Date</span> <span class="value">Tomorrow, 14:00</span>
+                    </div>
+                    <div class="info-row">
+                        <span>🦷</span> <span class="label">Service</span> <span class="value">Dental Checkup</span>
+                    </div>
+                </div>
+
+                <div class="refund-status">
+                    <span>✅</span>
+                    <div><strong>Refund Eligible</strong><br><span style="font-size:12px">Deposit (€30.00) will be
+                            refunded.</span></div>
+                </div>
+
+                <p
+                    style="font-size:14px; color:#991b1b; background:#fef2f2; padding:10px; border-radius:6px; margin-bottom:20px;">
+                    ⚠️ This action cannot be undone.
+                </p>
+
+                <button id="cancelBtn" class="btn btn-danger" onclick="simulateCancel()">
+                    ❌ Confirm Cancellation
+                </button>
+            </div>
+        </div>
+
+        <!-- Success Result -->
+        <div id="successResult" class="result">
+            <div class="icon">✅</div>
+            <h2>Appointment Cancelled</h2>
+            <p style="color:#666; font-size:14px;">Your appointment has been cancelled. Your deposit will be refunded
+                within 5-10 business days.</p>
+        </div>
+    </div>
+
+    <script>
+        function simulateCancel() {
+            const btn = document.getElementById('cancelBtn');
+            btn.innerHTML = 'Processing...';
+            btn.style.opacity = '0.7';
+
+            // Artificial delay to make it feel real
+            setTimeout(() => {
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('successResult').classList.add('active');
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>

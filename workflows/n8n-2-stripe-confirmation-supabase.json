@@ -14,12 +14,43 @@
         },
         {
             "parameters": {
-                "command": "=mkdir -p /home/node/.n8n/dlq && echo '{{ JSON.stringify({ timestamp: $now.toISO(), error: { message: String($json.error?.message || $json.message || \"Unknown error\").replace(/'/g, \"\"), node: $json.error?.node?.name || \"Unknown\" }, recovery_attempts: 0 }) }}' > /home/node/.n8n/dlq/failed-{{ $now.format('yyyyMMdd-HHmmss') }}.json && echo 'DLQ saved'"
+                "jsCode": "const errorData = $input.first().json;\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    error: {\n      message: errorData.error?.message || errorData.message || 'Unknown error',\n      node: errorData.error?.node?.name || 'Unknown',\n      stack: errorData.error?.stack || null\n    },\n    workflow: {\n      id: $workflow.id,\n      name: $workflow.name\n    },\n    original_data: errorData,\n    recovery_attempts: 0\n  }\n}];"
             },
-            "type": "n8n-nodes-base.executeCommand",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -200,
+                408
+            ],
+            "id": "prepare-dlq-data",
+            "name": "Prepare DLQ Data"
+        },
+        {
+            "parameters": {
+                "mode": "jsonToBinary",
+                "options": {
+                    "fileName": "={{ 'failed-' + $now.format('yyyyMMdd-HHmmss') + '.json' }}"
+                }
+            },
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1.1,
+            "position": [
+                -50,
+                408
+            ],
+            "id": "convert-to-file",
+            "name": "Convert to File"
+        },
+        {
+            "parameters": {
+                "operation": "write",
+                "fileName": "={{ '/files/dlq/failed-' + $now.format('yyyyMMdd-HHmmss') + '.json' }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.readWriteFile",
             "typeVersion": 1,
             "position": [
-                -128,
+                100,
                 408
             ],
             "id": "save-dlq",
@@ -374,6 +405,7 @@
             ],
             "id": "create-new-booking",
             "name": "Create New Booking",
+            "continueOnFail": true,
             "credentials": {
                 "supabaseApi": {
                     "id": "dlNOvdwAbyq59XOl",
@@ -516,6 +548,28 @@
     ],
     "connections": {
         "Error Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare DLQ Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare DLQ Data": {
+            "main": [
+                [
+                    {
+                        "node": "Convert to File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Convert to File": {
             "main": [
                 [
                     {
