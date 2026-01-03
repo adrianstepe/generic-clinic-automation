@@ -285,7 +285,7 @@ const BookingWidget: React.FC = () => {
 
             {/* Hidden Link for You to Click */}
             <div className="fixed bottom-2 right-2 opacity-30 hover:opacity-100 z-50 transition-opacity">
-                <a href="/login" className="text-xs text-gray-500 dark:text-slate-600 bg-gray-200 dark:bg-slate-800 px-2 py-1 rounded shadow-sm dark:shadow-none border dark:border-slate-700">Admin</a>
+                <a href="/login" className="text-xs text-gray-500 dark:text-slate-600 bg-gray-200 dark:bg-slate-800 px-2 py-1 rounded shadow-sm dark:shadow-none border dark:border-slate-700">Login</a>
             </div>
         </div>
     );
