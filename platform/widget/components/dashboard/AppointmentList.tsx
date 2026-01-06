@@ -63,7 +63,7 @@ type DateFilterType = 'today' | 'tomorrow' | 'all' | 'custom';
 
 const AppointmentList: React.FC<AppointmentListProps> = ({ bookings, loading, error, onUpdateStatus, onEditBooking, onAddBooking }) => {
     const [filter, setFilter] = useState('all');
-    const [dateFilter, setDateFilter] = useState<DateFilterType>('today');
+    const [dateFilter, setDateFilter] = useState<DateFilterType>('all');
     const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [search, setSearch] = useState('');
 

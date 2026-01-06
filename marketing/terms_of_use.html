@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="lv">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lietošanas Noteikumi | Klīnikas Automatizācija</title>
+    <meta name="description"
+        content="Lietošanas noteikumi - pakalpojuma lietošanas vispārīgie noteikumi un nosacījumi.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0055ff',
+                        'primary-dark': '#0044cc',
+                        secondary: '#00d2d3',
+                        dark: '#2d3436',
+                        light: '#f8f9fa',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #0055ff 0%, #00d2d3 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-dark antialiased">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="landing_page.html" class="flex items-center space-x-2">
+                    <div class="w-8 h-8 gradient-bg rounded-lg"></div>
+                    <span class="font-bold text-xl text-dark">Klīnikas Automatizācija</span>
+                </a>
+                <a href="landing_page.html" class="text-gray-600 hover:text-primary transition-colors">← Atpakaļ uz
+                    sākumu</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="pt-24 pb-16">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white rounded-2xl shadow-sm p-8 md:p-12">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Lietošanas Noteikumi</h1>
+                <p class="text-gray-500 mb-8">Pēdējo reizi atjaunināts: 2026. gada 5. janvāris</p>
+
+                <div class="prose prose-lg max-w-none text-gray-600 space-y-8">
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">1. Vispārīgie noteikumi</h2>
+                        <p>Šie lietošanas noteikumi ("Noteikumi") nosaka Klīnikas Automatizācija pakalpojumu lietošanas
+                            kārtību. Izmantojot mūsu pakalpojumus vai tīmekļa vietni, Jūs piekrītat šiem Noteikumiem.
+                        </p>
+                        <p class="mt-4">Pakalpojuma sniedzējs:</p>
+                        <ul class="list-none mt-2 space-y-1">
+                            <li><strong>Klīnikas Automatizācija</strong></li>
+                            <li>E-pasts: <a href="mailto:adriansbusinessw@gmail.com"
+                                    class="text-primary hover:underline">adriansbusinessw@gmail.com</a></li>
+                            <li>WhatsApp: <a href="https://wa.me/37127307068" class="text-primary hover:underline">+371
+                                    2730 7068</a></li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">2. Pakalpojuma apraksts</h2>
+                        <p>Klīnikas Automatizācija piedāvā šādus pakalpojumus:</p>
+                        <ul class="list-disc pl-6 mt-4 space-y-2">
+                            <li>Automatizēta pacientu pieraksta sistēma (pieraksta logriks)</li>
+                            <li>Automātiski e-pasta un SMS atgādinājumi par vizītēm</li>
+                            <li>Administrācijas panelis pierakstu un grafiku vadībai</li>
+                            <li>Integrācija ar maksājumu sistēmām</li>
+                            <li>Tehniskais atbalsts</li>
+                        </ul>
+                        <p class="mt-4">Pakalpojums tiek sniegts kā programmatūra kā pakalpojums (SaaS) un ir pieejams
+                            tiešsaistē.</p>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">3. Pakalpojuma lietošanas noteikumi klīnikām
+                            (B2B)</h2>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">3.1. Reģistrācija un konts</h3>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Lai izmantotu pakalpojumu, klīnikai jāreģistrējas un jāsniedz patiesai informācija par
+                                sevi.</li>
+                            <li>Klīnika ir atbildīga par sava konta drošību un par visām darbībām, kas veiktas ar tās
+                                kontu.</li>
+                            <li>Klīnikai nekavējoties jāinformē mūs par jebkādu nesankcionētu piekļuvi kontam.</li>
+                        </ul>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">3.2. Maksājumi</h3>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Pakalpojuma cenas ir norādītas mūsu tīmekļa vietnē vai individuālajā piedāvājumā.</li>
+                            <li>Abonēšanas maksa tiek iekasēta mēneša sākumā vai saskaņā ar noslēgto līgumu.</li>
+                            <li>Maksājumi tiek apstrādāti caur Stripe maksājumu sistēmu.</li>
+                            <li>Nokavētu maksājumu gadījumā mēs varam apturēt pakalpojumu pēc 14 dienu brīdinājuma.</li>
+                        </ul>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">3.3. Bezmaksas izmēģinājuma periods
+                        </h3>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Mēs piedāvājam 14 dienu bezmaksas izmēģinājuma periodu.</li>
+                            <li>Izmēģinājuma periodā nav nepieciešama kredītkarte.</li>
+                            <li>Pēc izmēģinājuma perioda beigām, lai turpinātu lietot pakalpojumu, jānoslēdz maksas
+                                abonements.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">4. Pakalpojuma lietošanas noteikumi pacientiem
+                        </h2>
+                        <p>Pacienti, kas izmanto pieraksta logriku:</p>
+                        <ul class="list-disc pl-6 mt-4 space-y-2">
+                            <li>Apņemas sniegt patiesu informāciju par sevi un savu kontaktinformāciju.</li>
+                            <li>Apņemas ierasties uz pierakstīto vizīti vai atcelt to savlaicīgi.</li>
+                            <li>Piekrīt saņemt automātiskus atgādinājumus par vizīti uz norādīto e-pastu un telefonu.
+                            </li>
+                            <li>Ar pierakstīšanos piekrīt personas datu apstrādei saskaņā ar mūsu <a
+                                    href="privacy_policy.html" class="text-primary hover:underline">Privātuma
+                                    politiku</a>.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">5. Atļautā un aizliegtā lietošana</h2>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">5.1. Atļautā lietošana</h3>
+                        <p>Pakalpojums ir paredzēts tikai:</p>
+                        <ul class="list-disc pl-6 mt-2 space-y-1">
+                            <li>Medicīnas, zobārstniecības un veselības aprūpes klīnikām pacientu pierakstu vadībai</li>
+                            <li>Likumīgiem biznesa mērķiem saskaņā ar šiem Noteikumiem</li>
+                        </ul>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">5.2. Aizliegtā lietošana</h3>
+                        <p>Ir aizliegts:</p>
+                        <ul class="list-disc pl-6 mt-2 space-y-1">
+                            <li>Izmantot pakalpojumu nelikumīgiem mērķiem</li>
+                            <li>Mēģināt nesankcionēti piekļūt sistēmai vai citiem kontiem</li>
+                            <li>Traucēt vai pārslogot pakalpojuma infrastruktūru</li>
+                            <li>Kopēt, modificēt vai atpakaļprojektēt programmatūru</li>
+                            <li>Izmantot pakalpojumu surogātpasta vai kaitīga satura izplatīšanai</li>
+                            <li>Nodot savu kontu vai tā piekļuves datus trešajām personām bez mūsu piekrišanas</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">6. Intelektuālais īpašums</h2>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Visa pakalpojuma programmatūra, dizains, teksti un citi materiāli ir mūsu vai mūsu
+                                licences devēju intelektuālais īpašums.</li>
+                            <li>Klīnikai pieder visi dati, ko tā ievada sistēmā par saviem pacientiem.</li>
+                            <li>Mēs piešķiram klīnikai ierobežotu, neekskluzīvu licenci pakalpojuma izmantošanai līguma
+                                darbības laikā.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">7. Pakalpojuma pieejamība</h2>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Mēs cenšamies nodrošināt pakalpojuma pieejamību 99.5% laika.</li>
+                            <li>Plānoti tehniskie darbi tiks paziņoti iepriekš un parasti notiks ārpus darba laika.</li>
+                            <li>Mēs neesam atbildīgi par īslaicīgiem pārtraukumiem, kas radušies tehnisku iemeslu, trešo
+                                pušu darbību vai nepārvaramas varas apstākļu dēļ.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">8. Atbildības ierobežojumi</h2>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Pakalpojums tiek sniegts "tāds, kāds tas ir" (AS-IS).</li>
+                            <li>Mēs negarantējam, ka pakalpojums būs pilnībā bez kļūdām vai nepārtraukti pieejams.</li>
+                            <li>Mūsu maksimālā atbildība ir ierobežota līdz klīnikas samaksātajai abonēšanas maksai par
+                                pēdējiem 3 mēnešiem.</li>
+                            <li>Mēs neesam atbildīgi par netiešiem, izrietošiem vai soda zaudējumiem.</li>
+                            <li>Klīnika ir atbildīga par sava personāla apmācību un pareizu pakalpojuma lietošanu.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">9. Datu apstrāde un konfidencialitāte</h2>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Personas datu apstrāde notiek saskaņā ar mūsu <a href="privacy_policy.html"
+                                    class="text-primary hover:underline">Privātuma politiku</a>.</li>
+                            <li>Mēs apņemamies ievērot konfidencialitāti attiecībā uz klīnikas biznesa informāciju.</li>
+                            <li>Klīnika ir datu pārzinis attiecībā uz saviem pacientiem, un mēs esam datu apstrādātājs.
+                            </li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">10. Līguma termiņš un izbeigšana</h2>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">10.1. Termiņš</h3>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Līgums stājas spēkā ar reģistrācijas brīdi vai līguma parakstīšanu.</li>
+                            <li>Mēneša abonements tiek automātiski atjaunots katru mēnesi, ja nav atcelts.</li>
+                        </ul>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">10.2. Atcelšana</h3>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Klīnika var atcelt abonementu jebkurā laikā, informējot mūs pa e-pastu.</li>
+                            <li>Atcelšana stājas spēkā nākamā norēķinu perioda sākumā.</li>
+                            <li>Nav termiņa līguma — nav soda par priekšlaicīgu atcelšanu.</li>
+                        </ul>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">10.3. Mūsu tiesības izbeigt līgumu
+                        </h3>
+                        <p>Mēs varam izbeigt līgumu nekavējoties, ja:</p>
+                        <ul class="list-disc pl-6 mt-2 space-y-1">
+                            <li>Klīnika būtiski pārkāpj šos Noteikumus</li>
+                            <li>Klīnika kavē maksājumus vairāk nekā 30 dienas</li>
+                            <li>Klīnika izmanto pakalpojumu nelikumīgiem mērķiem</li>
+                        </ul>
+
+                        <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">10.4. Pēc līguma izbeigšanas</h3>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Klīnika var pieprasīt savu datu eksportu 30 dienu laikā pēc līguma izbeigšanas.</li>
+                            <li>Pēc 30 dienām dati tiks neatgriezeniski dzēsti.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">11. Noteikumu izmaiņas</h2>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Mēs varam laiku pa laikam atjaunināt šos Noteikumus.</li>
+                            <li>Par būtiskām izmaiņām mēs informēsim pa e-pastu vismaz 30 dienas iepriekš.</li>
+                            <li>Turpinot lietot pakalpojumu pēc izmaiņām, Jūs piekrītat jaunajiem Noteikumiem.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">12. Piemērojamie tiesību akti un strīdu
+                            risināšana</h2>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>Šiem Noteikumiem un no tiem izrietošajām attiecībām piemērojami Latvijas Republikas
+                                tiesību akti.</li>
+                            <li>Strīdi vispirms tiek risināti sarunu ceļā.</li>
+                            <li>Ja strīdu neizdodas atrisināt sarunu ceļā, tas tiek izskatīts Latvijas Republikas tiesā.
+                            </li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">13. Kontaktinformācija</h2>
+                        <p>Ja Jums ir jautājumi par šiem Noteikumiem, lūdzu, sazinieties ar mums:</p>
+                        <ul class="list-none mt-4 space-y-1">
+                            <li>E-pasts: <a href="mailto:adriansbusinessw@gmail.com"
+                                    class="text-primary hover:underline">adriansbusinessw@gmail.com</a></li>
+                            <li>WhatsApp: <a href="https://wa.me/37127307068" class="text-primary hover:underline">+371
+                                    2730 7068</a></li>
+                        </ul>
+                    </section>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-400 text-sm">© 2026 Klīnikas Automatizācija. Visas tiesības aizsargātas.</p>
+            <div class="flex justify-center space-x-6 mt-4">
+                <a href="privacy_policy.html" class="text-gray-400 hover:text-white text-sm">Privātuma politika</a>
+                <a href="terms_of_use.html" class="text-gray-400 hover:text-white text-sm">Lietošanas noteikumi</a>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

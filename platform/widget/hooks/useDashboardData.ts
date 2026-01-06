@@ -49,6 +49,33 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Demo mode mock data for video recording
+    const getDemoBookings = (): DashboardBooking[] => {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+        return [
+            {
+                id: 'demo-1',
+                created_at: new Date().toISOString(),
+                customer_name: 'Adrians Stepe',
+                customer_email: 'adriansbusinessw@gmail.com',
+                customer_phone: '20000000',
+                start_time: '2026-01-06T16:00:00+02:00',
+                end_time: '2026-01-06T17:00:00+02:00',
+                status: 'confirmed',
+                service_name: 'Zobu balināšana',
+                service_id: 'demo_s3',
+                doctor_name: 'Dr. Ieva Bērziņa',
+                doctor: { full_name: 'Dr. Ieva Bērziņa' },
+                service: { name: 'Zobu balināšana', price: 30, durationMinutes: 60 }
+            }
+        ];
+    };
+
     const fetchBookings = async () => {
         try {
             setLoading(true);
@@ -60,9 +87,10 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
             console.log('[Dashboard] Fetching bookings...');
             console.log('[Dashboard] Current User:', user?.id, user?.email);
 
+            // DEMO MODE: If no user logged in, show demo data for video recording
             if (!user) {
-                console.log('[Dashboard] No authenticated user found');
-                setError('Please log in to view bookings');
+                console.log('[Dashboard] No user - using DEMO MODE with mock data');
+                setBookings(getDemoBookings());
                 setLoading(false);
                 return;
             }

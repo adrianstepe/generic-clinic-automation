@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useUser } from '@/contexts/UserContext';
 import { Plus, Pencil, Trash2, X, Save, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { SERVICES as DEMO_SERVICES } from '@/constants';
+import { Language } from '@/types';
 
 interface ServiceItem {
     id: string;
@@ -30,10 +33,14 @@ const getCategoryLabel = (category: string): string => {
 
 const ServicesPage: React.FC = () => {
     const { profile } = useUser();
+    const location = useLocation();
     const [services, setServices] = useState<ServiceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+
+    // Check if we're in demo mode
+    const isDemoMode = new URLSearchParams(location.search).get('demo') === 'true';
 
     // Form State
     const [formData, setFormData] = useState({
@@ -45,10 +52,26 @@ const ServicesPage: React.FC = () => {
     const clinicId = import.meta.env.VITE_CLINIC_ID;
 
     useEffect(() => {
-        if (clinicId) {
+        if (isDemoMode) {
+            // Use demo data from constants.ts
+            const demoData: ServiceItem[] = DEMO_SERVICES.map(s => ({
+                id: s.id,
+                name: {
+                    LV: s.name[Language.LV] || '',
+                    EN: s.name[Language.EN] || '',
+                    RU: s.name[Language.RU] || ''
+                },
+                price_cents: s.price * 100,
+                duration_minutes: s.durationMinutes,
+                category: s.category || 'treatment',
+                is_active: true
+            }));
+            setServices(demoData);
+            setLoading(false);
+        } else if (clinicId) {
             fetchServices();
         }
-    }, [clinicId]);
+    }, [clinicId, isDemoMode]);
 
     const fetchServices = async () => {
         setLoading(true);

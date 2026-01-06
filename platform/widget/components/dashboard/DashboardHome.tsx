@@ -53,7 +53,7 @@ const DashboardHome: React.FC = () => {
                 notes: updates.notes,
                 status: 'confirmed', // Admin created bookings are confirmed by default
                 clinic_id: profile.clinic_id,
-                business_id: 'BUTKEVICA_DENTAL', // Fallback or strict? Ideally matching profile
+                business_id: 'DEMO_CLINIC', // Demo fallback
                 created_at: new Date().toISOString()
             });
 
@@ -109,7 +109,7 @@ const DashboardHome: React.FC = () => {
         end_time: b.end_time,
         status: b.status,
         doctor_id: b.doctor_id,
-        doctor_name: b.doctor?.full_name || 'Nav norādīts',
+        doctor_name: b.doctor?.full_name || b.doctor_name || 'Nav norādīts',
         duration: b.service?.durationMinutes,
         notes: b.notes
     }));

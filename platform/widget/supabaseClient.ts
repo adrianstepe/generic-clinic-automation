@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
     auth: {
         persistSession: true,
-        storageKey: 'butkevica-auth-token',
+        storageKey: 'dental-clinic-auth-token',
         storage: window.localStorage,
     },
 });

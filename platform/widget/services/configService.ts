@@ -127,6 +127,12 @@ function isCacheValid(clinicId: string): boolean {
  * Fetch services from Supabase 'services' table
  */
 export async function fetchServices(clinicId: string): Promise<Service[]> {
+  // DEMO MODE: Force fallback for demo-clinic to ensure consistent demo experience
+  if (clinicId === 'demo-clinic') {
+    console.log('[ConfigService] Demo mode: using fallback services');
+    return FALLBACK_SERVICES;
+  }
+
   if (cachedServices && isCacheValid(clinicId)) return cachedServices;
 
   try {
@@ -155,6 +161,12 @@ export async function fetchServices(clinicId: string): Promise<Service[]> {
  * Fetch specialists from Supabase 'specialists' table
  */
 export async function fetchSpecialists(clinicId: string): Promise<Specialist[]> {
+  // DEMO MODE: Force fallback for demo-clinic
+  if (clinicId === 'demo-clinic') {
+    console.log('[ConfigService] Demo mode: using fallback specialists');
+    return FALLBACK_SPECIALISTS;
+  }
+
   if (cachedSpecialists && isCacheValid(clinicId)) return cachedSpecialists;
 
   try {

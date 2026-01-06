@@ -207,7 +207,15 @@ const PatientForm: React.FC<PatientFormProps> = ({ language, data, updateData })
             </svg>
           </div>
           <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors select-none leading-relaxed">
-            {texts.gdprLabel[language]}
+            {language === Language.LV && (
+              <>Piekrītu manu personas datu apstrādei saskaņā ar <a href="https://klinika.lv/privacy_policy.html" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Privātuma politiku</a>.</>
+            )}
+            {language === Language.EN && (
+              <>I agree to the processing of my personal data according to the <a href="https://klinika.lv/privacy_policy.html" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Privacy Policy</a>.</>
+            )}
+            {language === Language.RU && (
+              <>Я согласен на обработку персональных данных согласно <a href="https://klinika.lv/privacy_policy.html" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Политике конфиденциальности</a>.</>
+            )}
           </span>
         </label>
       </div>

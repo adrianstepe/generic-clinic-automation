@@ -1,17 +1,23 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useUser } from '@/contexts/UserContext';
 import { Plus, Edit2, Trash2, X, Upload, Loader2 } from 'lucide-react';
 import { Specialist, Language } from '@/types';
+import { SPECIALISTS as DEMO_SPECIALISTS } from '@/constants';
 
 const SpecialistsPage: React.FC = () => {
     const { profile } = useUser();
+    const location = useLocation();
     const [specialists, setSpecialists] = useState<Specialist[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Check if we're in demo mode
+    const isDemoMode = new URLSearchParams(location.search).get('demo') === 'true';
 
     // Form State
     const [formData, setFormData] = useState({
@@ -29,10 +35,25 @@ const SpecialistsPage: React.FC = () => {
     const clinicId = import.meta.env.VITE_CLINIC_ID;
 
     useEffect(() => {
-        if (clinicId) {
+        if (isDemoMode) {
+            // Use demo data from constants.ts
+            const demoData: Specialist[] = DEMO_SPECIALISTS.map(s => ({
+                id: s.id,
+                name: s.name,
+                role: {
+                    EN: s.role[Language.EN] || '',
+                    LV: s.role[Language.LV] || '',
+                    RU: s.role[Language.RU] || ''
+                },
+                photoUrl: s.photoUrl || '',
+                specialties: s.specialties || []
+            }));
+            setSpecialists(demoData);
+            setLoading(false);
+        } else if (clinicId) {
             fetchSpecialists();
         }
-    }, [clinicId]);
+    }, [clinicId, isDemoMode]);
 
     const fetchSpecialists = async () => {
         try {

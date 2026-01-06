@@ -4,18 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Automatizēta Pacientu Pieraksta Sistēma</title>
+    <title>Automatizēta Pacientu Pieraksta Sistēma | Klīnikas Automatizācija</title>
+    <meta name="description"
+        content="Samaziniet neierašanos skaitu un atbrīvojiet administratorus no liekiem zvaniem. Automatizēta pierakstu sistēma zobārstniecības un medicīnas klīnikām Latvijā.">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         primary: '#0055ff',
+                        'primary-dark': '#0044cc',
                         secondary: '#00d2d3',
                         dark: '#2d3436',
                         light: '#f8f9fa',
+                        accent: '#6366f1',
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -35,29 +40,123 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
         }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #0055ff 0%, #00d2d3 100%);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #0055ff 0%, #00d2d3 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hover-lift {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 85, 255, 0.15);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .faq-item {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+
+        .whatsapp-btn {
+            background: #25D366;
+        }
+
+        .whatsapp-btn:hover {
+            background: #20BD5A;
+        }
     </style>
 </head>
 
 <body class="bg-slate-50 text-dark antialiased">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 gradient-bg rounded-lg"></div>
+                    <span class="font-bold text-xl text-dark">Klīnikas Automatizācija</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#how-it-works" class="text-gray-600 hover:text-primary transition-colors">Kā tas strādā</a>
+                    <a href="#demo" class="text-gray-600 hover:text-primary transition-colors">Demo</a>
+                    <a href="#pricing" class="text-gray-600 hover:text-primary transition-colors">Cenas</a>
+                    <a href="#faq" class="text-gray-600 hover:text-primary transition-colors">BUJ</a>
+                    <a href="#contact"
+                        class="bg-primary text-white px-5 py-2 rounded-full font-medium hover:bg-primary-dark transition-colors">Sazināties</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <!-- Hero Section -->
-    <header class="relative bg-white overflow-hidden">
+    <header class="relative bg-white overflow-hidden pt-16">
         <div class="max-w-7xl mx-auto">
             <div class="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
                 <main class="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-                    <div class="sm:text-center lg:text-left">
+                    <div class="sm:text-center lg:text-left fade-in">
+                        <span
+                            class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-100 text-primary font-semibold mb-4 shadow-sm">
+                            🇱🇻 Vietējais Atbalsts & Latvijas Datu Atbilstība
+                        </span>
                         <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
                             <span class="block xl:inline">Automatizēta pacientu</span>
-                            <span class="block text-primary">plūsma Jūsu klīnikai</span>
+                            <span class="block gradient-text">plūsma Jūsu klīnikai</span>
                         </h1>
                         <p
                             class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
                             Samaziniet neierašanos skaitu un atbrīvojiet administratorus no liekiem zvaniem.
+                            Sistēma, kas strādā 24/7 — arī brīvdienās.
                         </p>
-                        <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
-                            <div class="rounded-md shadow">
-                                <a href="#trial"
-                                    class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-blue-700 md:py-4 md:text-lg transition-colors">
-                                    Sākt bezmaksas izmēģinājumu
+                        <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start gap-4">
+                            <div class="rounded-full shadow">
+                                <a href="#demo"
+                                    class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-full text-white bg-primary hover:bg-primary-dark md:py-4 md:text-lg transition-colors">
+                                    🎬 Skatīt Demo
+                                </a>
+                            </div>
+                            <div class="mt-3 sm:mt-0">
+                                <a href="#contact"
+                                    class="w-full flex items-center justify-center px-8 py-3 border-2 border-primary text-base font-medium rounded-full text-primary bg-white hover:bg-blue-50 md:py-4 md:text-lg transition-colors">
+                                    Sazināties →
                                 </a>
                             </div>
                         </div>
@@ -65,21 +164,85 @@
                 </main>
             </div>
         </div>
-        <div class="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 bg-gray-50 flex items-center justify-center">
+        <div
+            class="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 bg-gradient-to-br from-blue-50 to-teal-50 flex items-center justify-center">
             <img class="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full opacity-90"
-                src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1353&q=80"
-                alt="Doctor using tablet">
+                src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?ixlib=rb-4.0.3&auto=format&fit=crop&w=1353&q=80"
+                alt="Moderna zobārstniecības recepcija">
         </div>
     </header>
+
+    <!-- Trust Badges -->
+    <section class="py-8 bg-white border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-wrap justify-center items-center gap-6 md:gap-8 text-gray-600 text-sm">
+                <div class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full">
+                    <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium">GDPR Atbilstība</span>
+                </div>
+                <div class="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full">
+                    <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium">Dati Glabājas ES</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <span>Droši Maksājumi (Stripe)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <span>24h Atbalsts</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <span>Bez Termiņa Līguma</span>
+                </div>
+            </div>
+            <!-- Calendar Integrations -->
+            <div class="flex flex-wrap justify-center items-center gap-6 mt-4 pt-4 border-t border-gray-100">
+                <span class="text-xs text-gray-400 uppercase tracking-wider">Integrējas ar:</span>
+                <div class="flex items-center gap-2 text-gray-500">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M19.5 22h-15A2.5 2.5 0 012 19.5v-15A2.5 2.5 0 014.5 2H8v2H4.5a.5.5 0 00-.5.5v15a.5.5 0 00.5.5h15a.5.5 0 00.5-.5V19h2v.5a2.5 2.5 0 01-2.5 2.5z" />
+                        <path d="M18.5 2H16v2h2.5a.5.5 0 01.5.5V8h2V4.5A2.5 2.5 0 0018.5 2zM8 5V2h8v3H8z" />
+                        <path
+                            d="M17 8H7a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V9a1 1 0 00-1-1zm-7 7v-2h2v2H10zm4 0v-2h2v2h-2zm-4-4v-2h2v2h-2zm4 0v-2h2v2h-2z"
+                            fill="#4285F4" />
+                    </svg>
+                    <span class="text-sm">Google Calendar</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Problem Section -->
     <section class="py-16 bg-light">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-extrabold text-gray-900">Vai saskaraties ar šīm problēmām?</h2>
+                <h2 class="text-3xl font-extrabold text-gray-900">Problēmas, ar kurām saskaras klīnikas</h2>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div
-                    class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="bg-white p-8 rounded-2xl shadow-sm hover-lift relative overflow-hidden group">
                     <div class="absolute top-0 left-0 w-2 h-full bg-red-400"></div>
                     <div class="mb-4 text-red-500">
                         <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,12 +251,11 @@
                             </path>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Pārslogoti Administratori</h3>
-                    <p class="text-gray-600">Administratori pavada pusi dienas, zvanot un atgādinot pacientiem par
-                        vizītēm.</p>
+                    <h3 class="text-xl font-bold mb-2">Pārslogoti administratori</h3>
+                    <p class="text-gray-600">Administratori lielu dienas daļu pavada, zvanot pacientiem, apstiprinot
+                        pierakstus un pārceļot vizītes, nevis palīdzot klīnikas darbībai.</p>
                 </div>
-                <div
-                    class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                <div class="bg-white p-8 rounded-2xl shadow-sm hover-lift relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-2 h-full bg-red-400"></div>
                     <div class="mb-4 text-red-500">
                         <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,11 +263,11 @@
                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Dīkstāve (No-Shows)</h3>
-                    <p class="text-gray-600">Pacienti aizmirst un neatnāk, radot dārgu dīkstāvi ārsta grafikā.</p>
+                    <h3 class="text-xl font-bold mb-2">Neierašanās uz vizītēm (no-show)</h3>
+                    <p class="text-gray-600">Pacienti aizmirst par pierakstu vai neatnāk, atstājot tukšus laikus ārsta
+                        grafikā un radot tiešus finanšu zaudējumus.</p>
                 </div>
-                <div
-                    class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                <div class="bg-white p-8 rounded-2xl shadow-sm hover-lift relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-2 h-full bg-red-400"></div>
                     <div class="mb-4 text-red-500">
                         <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,14 +276,54 @@
                             </path>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Cilvēciskās Kļūdas</h3>
-                    <p class="text-gray-600">Manuāla pierakstu vadība ir pakļauta kļūdām un dubultiem pierakstiem.</p>
+                    <h3 class="text-xl font-bold mb-2">Cilvēciskas kļūdas</h3>
+                    <p class="text-gray-600">Manuāla pierakstu pārvaldība palielinā risku kļūdām, pārklājošiem
+                        pierakstiem un neskaidrībām starp administratoriem un ārstiem.</p>
                 </div>
             </div>
         </div>
     </section>
+
+    <!-- How It Works Section -->
+    <section class="py-20 bg-white" id="how-it-works">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-primary font-semibold tracking-wider uppercase">Kā tas strādā</span>
+                <h2 class="text-3xl font-extrabold text-gray-900 mt-2">3 vienkārši soļi</h2>
+                <p class="mt-4 text-gray-500 max-w-2xl mx-auto">Mēs parūpēsimies par ieviešanu — Jums nav jābūt
+                    tehniķim.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Step 1 -->
+                <div class="text-center p-8 hover-lift">
+                    <div class="step-number gradient-bg text-white mx-auto mb-6">1</div>
+                    <div class="text-5xl mb-4">📋</div>
+                    <h3 class="text-xl font-bold mb-3">Pacients pierakstās online</h3>
+                    <p class="text-gray-600">Logrīks Jūsu mājaslapā ļauj pacientiem izvēlēties laiku un pakalpojumu
+                        24/7.</p>
+                </div>
+                <!-- Step 2 -->
+                <div class="text-center p-8 hover-lift">
+                    <div class="step-number gradient-bg text-white mx-auto mb-6">2</div>
+                    <div class="text-5xl mb-4">📧</div>
+                    <h3 class="text-xl font-bold mb-3">Sistēma sūta atgādinājumus</h3>
+                    <p class="text-gray-600">Automātiski e-pasti un SMS 24h pirms vizītes. Pacients apstiprina ar vienu
+                        klikšķi.</p>
+                </div>
+                <!-- Step 3 -->
+                <div class="text-center p-8 hover-lift">
+                    <div class="step-number gradient-bg text-white mx-auto mb-6">3</div>
+                    <div class="text-5xl mb-4">✅</div>
+                    <h3 class="text-xl font-bold mb-3">Jūs redzat visu vienā vadības panelī</h3>
+                    <p class="text-gray-600">Visi pieraksti, atcelšanas, apstiprinājumi un statistika vienā pārskatāmā
+                        sistēmā. Skaidra kontrole bez haosa un liekiem zvaniem.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Solution Section -->
-    <section class="py-16 bg-white overflow-hidden">
+    <section class="py-16 bg-light overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="mb-16 text-center">
                 <span class="text-primary font-semibold tracking-wider uppercase">Risinājums</span>
@@ -136,14 +338,15 @@
                             </path>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold mb-4">Automātiski SMS un E-pasta atgādinājumi</h3>
-                    <p class="text-gray-600 text-lg">Sistēma automātiski nosūta atgādinājumu 24 stundas pirms vizītes.
-                        Pacients apstiprina ierašanos ar vienu klikšķi.</p>
+                    <h3 class="text-2xl font-bold mb-4">SMS un e-pasta atgādinājumi</h3>
+                    <p class="text-gray-600 text-lg">Sistēma automātiski nosūta pacientam atgādinājumu 24 stundas pirms
+                        vizītes.</p>
+                    <p class="text-primary font-medium mt-3">Rezultāts: mazāk neierašanos un pilnāks ārstu grafiks.</p>
                 </div>
                 <div
                     class="md:w-1/2 glass-card rounded-xl p-4 transform rotate-1 hover:rotate-0 transition-transform duration-500">
-                    <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                        alt="SMS reminder" class="rounded-lg shadow-md w-full object-cover h-64">
+                    <img src="https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                        alt="SMS atgādinājums telefonā" class="rounded-lg shadow-md w-full object-cover h-64">
                 </div>
             </div>
             <div class="flex flex-col md:flex-row-reverse items-center mb-20">
@@ -154,14 +357,14 @@
                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold mb-4">24/7 Online Reģistrācija</h3>
-                    <p class="text-gray-600 text-lg">Ļaujiet pacientiem pierakstīties pašiem jebkurā laikā – arī
-                        brīvdienās un vakaros.</p>
+                    <h3 class="text-2xl font-bold mb-4">Pieraksts jebkurā laikā</h3>
+                    <p class="text-gray-600 text-lg">Pacienti var pierakstīties paši – arī vakaros, brīvdienās un ārpus
+                        klīnikas darba laika, bez administratora iesaistes.</p>
                 </div>
                 <div
                     class="md:w-1/2 glass-card rounded-xl p-4 transform -rotate-1 hover:rotate-0 transition-transform duration-500">
-                    <img src="https://images.unsplash.com/photo-1551076805-e1869033e561?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                        alt="Booking Widget" class="rounded-lg shadow-md w-full object-cover h-64">
+                    <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                        alt="Online pierakstīšanās" class="rounded-lg shadow-md w-full object-cover h-64">
                 </div>
             </div>
             <div class="flex flex-col md:flex-row items-center">
@@ -172,55 +375,66 @@
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold mb-4">Aizpildīti "logi" un Gudrā rinda</h3>
-                    <p class="text-gray-600 text-lg">Ja atbrīvojas laiks, sistēma automātiski piedāvā to pacientiem no
-                        gaidīšanas saraksta.</p>
+                    <h3 class="text-2xl font-bold mb-4">Vienkārša grafika pārvaldība</h3>
+                    <p class="text-gray-600 text-lg">Visi pieraksti, atcelšanas un izmaiņas automātiski sinhronizējas ar
+                        Jūsu kalendāru reālā laikā.</p>
+                    <p class="text-primary font-medium mt-3">Rezultāts: mazāk tukšu "logu" grafikā un skaidra kontrole.
+                    </p>
                 </div>
                 <div
                     class="md:w-1/2 glass-card rounded-xl p-4 transform rotate-1 hover:rotate-0 transition-transform duration-500">
-                    <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                        alt="Full Schedule" class="rounded-lg shadow-md w-full object-cover h-64">
+                    <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                        alt="Organizēts kalendārs" class="rounded-lg shadow-md w-full object-cover h-64">
                 </div>
             </div>
         </div>
     </section>
+
     <!-- Demo Section -->
-    <section class="py-16 bg-gray-900 text-white text-center">
+    <section class="py-20 bg-gray-900 text-white text-center" id="demo">
         <div class="max-w-4xl mx-auto px-4">
-            <h2 class="text-3xl font-bold mb-4">Kā tas darbojas 2 minūtēs</h2>
-            <p class="text-gray-400 mb-8">Noskatieties īsu video demonstrāciju</p>
-            <div
-                class="aspect-w-16 aspect-h-9 bg-gray-800 rounded-2xl flex items-center justify-center border border-gray-700 shadow-2xl h-96 relative group cursor-pointer overflow-hidden">
-                <div class="absolute inset-0 bg-black opacity-50 group-hover:opacity-40 transition-opacity"></div>
-                <svg class="w-20 h-20 text-white relative z-10 opacity-90 group-hover:scale-110 transition-transform"
-                    fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                        clip-rule="evenodd"></path>
-                </svg>
-                <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80"
-                    alt="Video Thumb" class="absolute inset-0 w-full h-full object-cover mix-blend-overlay">
+            <span class="inline-block px-4 py-1 rounded-full bg-white/10 text-blue-300 text-sm font-medium mb-4">
+                🎬 Video Demo
+            </span>
+            <h2 class="text-3xl font-bold mb-4">Kā tas darbojas 1 minūtē</h2>
+            <p class="text-gray-400 mb-8">Noskatieties īsu video demonstrāciju.</p>
+
+            <!-- YouTube Video Embed -->
+            <div class="aspect-video bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 shadow-2xl">
+                <iframe class="w-full h-full"
+                    src="https://www.youtube-nocookie.com/embed/lNtnxKCxYuo?rel=0&modestbranding=1"
+                    title="Klīnikas Automatizācija Demo" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen>
+                </iframe>
             </div>
+
+            <p class="text-gray-500 text-sm mt-6">
+                Vai vēlaties redzēt sistēmu darbībā ar Jūsu datiem?
+                <a href="#contact" class="text-blue-400 hover:text-blue-300 underline">Pieprasiet personalizētu demo</a>
+            </p>
         </div>
     </section>
+
     <!-- Pricing Section -->
-    <section class="py-16 bg-white" id="pricing">
+    <section class="py-20 bg-white" id="pricing">
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Vienkāršs un caurskatāms modelis</h2>
-            <p class="text-gray-500 mb-12">Bez slēptām izmaksām. Atceliet jebkurā laikā.</p>
-            <div
-                class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform hover:-translate-y-1 transition-transform duration-300">
-                <div class="p-8 bg-gray-50 border-b border-gray-100">
-                    <h3 class="text-xl font-medium text-gray-900">Pamata Plāns</h3>
+            <span class="text-primary font-semibold tracking-wider uppercase">Cenas</span>
+            <h2 class="text-3xl font-extrabold text-gray-900 mt-2 mb-4">Vienkāršs un caurskatāms modelis</h2>
+            <p class="text-gray-500 mb-12">Bez slēptām izmaksām. Atceliet jebkurā laikā. Bez termiņa līguma.</p>
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden hover-lift">
+                <div class="p-8 gradient-bg">
+                    <h3 class="text-xl font-medium text-white/90">Pamata Plāns</h3>
                     <div class="mt-4 flex items-baseline justify-center">
-                        <span class="text-5xl font-extrabold text-gray-900">€99</span>
-                        <span class="ml-1 text-xl text-gray-500">/mēnesī</span>
+                        <span class="text-5xl font-extrabold text-white">€79</span>
+                        <span class="ml-1 text-xl text-white/80">/mēnesī</span>
                     </div>
+                    <p class="text-white/70 text-sm mt-2">Viss, kas nepieciešams efektīvai klīnikai</p>
                 </div>
                 <div class="p-8">
                     <ul class="space-y-4 text-left inline-block">
                         <li class="flex items-center">
-                            <svg class="h-6 w-6 text-green-500 mr-3" fill="none" stroke="currentColor"
+                            <svg class="h-6 w-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 13l4 4L19 7"></path>
@@ -228,71 +442,256 @@
                             <span class="text-gray-600">Neierobežoti SMS atgādinājumi</span>
                         </li>
                         <li class="flex items-center">
-                            <svg class="h-6 w-6 text-green-500 mr-3" fill="none" stroke="currentColor"
+                            <svg class="h-6 w-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 13l4 4L19 7"></path>
                             </svg>
-                            <span class="text-gray-600">Online pieraksta logrīks</span>
+                            <span class="text-gray-600">Online pieraksta logrīks Jūsu mājaslapai</span>
                         </li>
                         <li class="flex items-center">
-                            <svg class="h-6 w-6 text-green-500 mr-3" fill="none" stroke="currentColor"
+                            <svg class="h-6 w-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 13l4 4L19 7"></path>
                             </svg>
-                            <span class="text-gray-600">Visi ārstu kalendāri</span>
+                            <span class="text-gray-600">Visu ārstu kalendāri un grafiki</span>
                         </li>
                         <li class="flex items-center">
-                            <svg class="h-6 w-6 text-green-500 mr-3" fill="none" stroke="currentColor"
+                            <svg class="h-6 w-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 13l4 4L19 7"></path>
                             </svg>
-                            <span class="text-gray-600">Tehniskais atbalsts</span>
+                            <span class="text-gray-600">Administratora dashboards</span>
                         </li>
                         <li class="flex items-center">
-                            <svg class="h-6 w-6 text-green-500 mr-3" fill="none" stroke="currentColor"
+                            <svg class="h-6 w-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 13l4 4L19 7"></path>
                             </svg>
-                            <span class="text-gray-600">Bez termiņa līguma</span>
+                            <span class="text-gray-600">Tehniskais atbalsts (24h atbildes laiks)</span>
+                        </li>
+                        <li class="flex items-center">
+                            <svg class="h-6 w-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span class="text-gray-600">Bezmaksas ieviešana un apmācība</span>
                         </li>
                     </ul>
+                    <div class="mt-8">
+                        <a href="#contact"
+                            class="block w-full bg-primary text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-primary-dark transition-colors">
+                            Sākt 14 dienu bezmaksas testu →
+                        </a>
+                        <p class="text-gray-400 text-sm mt-3">Nav nepieciešama kredītkarte</p>
+                        <p class="text-gray-500 text-sm mt-2 flex items-center justify-center gap-2">
+                            <span class="text-lg">🛠️</span>
+                            <span>Nav nepieciešamas tehniskas prasmes — mēs visu uzstādām par Jums.</span>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
-    <!-- Trial / CTA Section -->
-    <section class="py-20 bg-primary" id="trial">
-        <div class="max-w-4xl mx-auto px-4 text-center">
-            <h2 class="text-3xl font-extrabold text-white mb-6">Sāciet ar bezmaksas izmēģinājumu</h2>
-            <p class="text-xl text-blue-100 mb-8">
-                Mēs piedāvājam 14 dienu bezmaksas testu, lai Jūs pārliecinātos par efektivitāti.
-                <br>Nav nepieciešama kredītkarte vai saistības.
-            </p>
-            <button
-                class="bg-white text-primary font-bold py-4 px-10 rounded-full text-lg shadow-lg hover:bg-gray-100 hover:scale-105 transition-all w-full sm:w-auto">
-                Pieteikties Izmēģinājumam →
-            </button>
-            <p class="mt-4 text-sm text-blue-200 opacity-80">Gatavi sakārtot savu klīniku?</p>
+
+    <!-- FAQ Section -->
+    <section class="py-20 bg-light" id="faq">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <span class="text-primary font-semibold tracking-wider uppercase">BUJ</span>
+                <h2 class="text-3xl font-extrabold text-gray-900 mt-2">Biežāk uzdotie jautājumi</h2>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div class="faq-item p-6">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2">Cik ilgi aizņem ieviešana?</h3>
+                    <p class="text-gray-600">Parasti 1–2 darba dienas. Mēs parūpējamies par visu tehnisko daļu – Jums
+                        tikai jāpievieno pieraksta logrīks mājaslapā (vai arī to izdarām Jūsu vietā).</p>
+                </div>
+                <div class="faq-item p-6">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2">Vai sistēma strādās ar manu esošo kalendāru?</h3>
+                    <p class="text-gray-600">Jā. Sistēma integrējas ar Google Calendar un citiem populāriem kalendāriem.
+                        Visi pieraksti sinhronizējas automātiski.</p>
+                </div>
+                <div class="faq-item p-6">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2">Kas notiek, ja nepieciešama palīdzība?</h3>
+                    <p class="text-gray-600">Piedāvājam atbalstu pa e-pastu ar atbildi 24 stundu laikā. Praksē lielākā
+                        daļa jautājumu tiek atrisināti tajā pašā dienā.</p>
+                </div>
+                <div class="faq-item p-6">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2">Vai varu atteikties jebkurā laikā?</h3>
+                    <p class="text-gray-600">Jā. Nav ilgtermiņa līgumu. Ja sistēma neatbilst Jūsu klīnikas vajadzībām,
+                        abonementu var atcelt jebkurā brīdī.</p>
+                </div>
+                <div class="faq-item p-6">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2">Vai pacientu dati ir drošībā?</h3>
+                    <p class="text-gray-600">Jā. Sistēma atbilst GDPR prasībām un Datu valsts inspekcijas vadlīnijām.
+                        Dati tiek šifrēti un apstrādāti droši, saskaņā ar ES normatīviem.</p>
+                </div>
+            </div>
         </div>
     </section>
+
+    <!-- Contact Section -->
+    <section class="py-20 bg-white" id="contact">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <span class="text-primary font-semibold tracking-wider uppercase">Sazināties</span>
+            <h2 class="text-3xl font-extrabold text-gray-900 mt-2 mb-4">Gatavi sakārtot savu klīniku?</h2>
+            <p class="text-gray-500 mb-12 max-w-2xl mx-auto">
+                Rakstiet mums — atbildēsim tajā pašā dienā. Bez pārdošanas spiediena, vienkārši atbildēsim uz Jūsu
+                jautājumiem.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Contact Form -->
+                <div class="bg-light rounded-2xl p-8 text-left">
+                    <h3 class="font-bold text-lg mb-6">Nosūtiet ziņu</h3>
+                    <!-- TODO: Replace Gmail with domain email (e.g., info@klinikasauto.lv) for trust -->
+                    <form action="https://formsubmit.co/adriansbusinessw@gmail.com" method="POST" class="space-y-4">
+                        <input type="hidden" name="_subject" value="Jauns pieprasījums no landing page">
+                        <input type="hidden" name="_captcha" value="false">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Jūsu vārds</label>
+                            <input type="text" id="name" name="name" required
+                                class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                placeholder="Jānis Bērziņš">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-pasts</label>
+                            <input type="email" id="email" name="email" required
+                                class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                placeholder="janis@klinika.lv">
+                        </div>
+                        <div>
+                            <label for="clinic" class="block text-sm font-medium text-gray-700 mb-1">Klīnikas nosaukums
+                                (neobligāti)</label>
+                            <input type="text" id="clinic" name="clinic"
+                                class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                placeholder="Centra Zobārstniecība">
+                        </div>
+                        <div>
+                            <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Jūsu jautājums vai
+                                ziņa</label>
+                            <textarea id="message" name="message" rows="3" required
+                                class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none"
+                                placeholder="Vēlos uzzināt vairāk par sistēmu..."></textarea>
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-primary text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-primary-dark transition-colors">
+                            Nosūtīt ziņu →
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Quick Contact Options -->
+                <div class="flex flex-col justify-center space-y-6">
+                    <div class="bg-light rounded-2xl p-6 hover-lift">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <!-- TODO: Replace Gmail with domain email for trust -->
+                            <div class="text-left">
+                                <p class="text-sm text-gray-500">E-pasts</p>
+                                <a href="mailto:adriansbusinessw@gmail.com"
+                                    class="font-medium text-gray-900 hover:text-primary">adriansbusinessw@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="https://wa.me/37127307068?text=Sveiki!%20Vēlos%20uzzināt%20vairāk%20par%20klīnikas%20automatizāciju."
+                        class="whatsapp-btn text-white rounded-2xl p-6 hover-lift flex items-center gap-4 transition-colors">
+                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                            </svg>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-sm text-white/80">WhatsApp</p>
+                            <span class="font-medium">Rakstīt tagad →</span>
+                        </div>
+                    </a>
+
+                    <div class="bg-blue-50 rounded-2xl p-6 text-left">
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-gray-900">💡 Padoms:</span> Ja vēlaties redzēt demo, vienkārši
+                            pierakstiet "Vēlos demo" — nosūtīsim video saiti.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="bg-dark text-white py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
-            <div class="mb-4 md:mb-0">
-                <span class="text-xl font-bold">Klīnikas Automatizācija</span>
-                <p class="text-gray-400 text-sm mt-1">© 2024 Visas tiesības aizsargātas.</p>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-3 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div class="w-8 h-8 gradient-bg rounded-lg"></div>
+                        <span class="font-bold text-xl">Klīnikas Automatizācija</span>
+                    </div>
+                    <p class="text-gray-400 text-sm">Automatizēta pacientu pieraksta sistēma zobārstniecības un
+                        medicīnas klīnikām Latvijā.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Saites</h4>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="#how-it-works" class="hover:text-white transition-colors">Kā tas strādā</a></li>
+                        <li><a href="#demo" class="hover:text-white transition-colors">Demo</a></li>
+                        <li><a href="#pricing" class="hover:text-white transition-colors">Cenas</a></li>
+                        <li><a href="#faq" class="hover:text-white transition-colors">BUJ</a></li>
+                        <li><a href="#contact" class="hover:text-white transition-colors">Kontakti</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Kontakti</h4>
+                    <!-- TODO: Replace Gmail with domain email for trust -->
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="mailto:adriansbusinessw@gmail.com"
+                                class="hover:text-white transition-colors">adriansbusinessw@gmail.com</a></li>
+                        <li><a href="https://wa.me/37127307068" class="hover:text-white transition-colors">WhatsApp:
+                                +371 2730 7068</a></li>
+                    </ul>
+                </div>
             </div>
-            <div class="flex space-x-6">
-                <a href="#" class="text-gray-400 hover:text-white">Privātuma politika</a>
-                <a href="#" class="text-gray-400 hover:text-white">Noteikumi</a>
-                <a href="#" class="text-gray-400 hover:text-white">Kontakti</a>
+            <div class="border-t border-gray-700 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-400 text-sm">© 2026 Klīnikas Automatizācija. Visas tiesības aizsargātas.</p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="privacy_policy.html"
+                        class="text-gray-400 hover:text-white text-sm transition-colors">Privātuma politika</a>
+                    <a href="terms_of_use.html"
+                        class="text-gray-400 hover:text-white text-sm transition-colors">Lietošanas
+                        noteikumi</a>
+                </div>
             </div>
         </div>
     </footer>
+
+    <!-- Smooth scroll for anchor links -->
+    <script>
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

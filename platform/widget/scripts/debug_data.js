@@ -1,49 +1,80 @@
+
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load env vars
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing Supabase env vars');
+if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing env vars');
     process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-async function checkData() {
-    console.log('--- Checking Clinics ---');
-    const { data: clinics, error: clinicsError } = await supabase
-        .from('clinics')
-        .select('*');
+async function debugData() {
+    console.log('--- Debugging Data Visibility ---');
 
-    if (clinicsError) console.error('Error fetching clinics:', clinicsError);
-    else console.table(clinics);
+    // 1. Log in as Admin
+    const { data: { session }, error: authError } = await supabase.auth.signInWithPassword({
+        email: 'admin@butkevica.com',
+        password: 'password123'
+    });
 
-    console.log('\n--- Checking Clinic Working Hours ---');
-    const { data: hours, error: hoursError } = await supabase
-        .from('clinic_working_hours')
+    if (authError || !session) {
+        console.error('Login failed:', authError?.message);
+        return;
+    }
+    console.log('Logged in as:', session.user.email);
+    console.log('User ID:', session.user.id);
+
+    // 2. Check Profile
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
         .select('*')
-        .order('clinic_id')
-        .order('day_of_week');
+        .eq('id', session.user.id)
+        .single();
 
-    if (hoursError) console.error('Error fetching working hours:', hoursError);
-    else {
-        console.table(hours.map(h => ({
-            clinic_id: h.clinic_id,
-            day: h.day_of_week,
-            open: h.is_open,
-            time: `${h.open_time}-${h.close_time}`
-        })));
+    if (profileError) {
+        console.error('Error fetching profile:', profileError.message);
+    } else {
+        console.log('\nUser Profile:', profile);
+    }
+
+    // 3. Check Booking (Bypassing RLS not possible here without service key, but we are logged in as admin so RLS should allow if setup correctly)
+    // We search specifically for the named customer
+    const { data: bookings, error: bookingError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('customer_name', 'Adrians Stepe');
+
+    if (bookingError) {
+        console.error('Error fetching bookings:', bookingError.message);
+    } else {
+        console.log('\nBookings found for "Adrians Stepe":', bookings.length);
+        bookings.forEach(b => {
+            console.log(`- Booking ID: ${b.id}`);
+            console.log(`  Clinic ID: ${b.clinic_id}`);
+            console.log(`  Start Time: ${b.start_time}`);
+            console.log(`  Status: ${b.status}`);
+        });
+    }
+
+    // 4. Mismatch Analysis
+    if (profile && bookings && bookings.length > 0) {
+        const booking = bookings[0];
+        if (profile.clinic_id !== booking.clinic_id) {
+            console.error(`\nCRITICAL MISMATCH: Profile Clinic ID (${profile.clinic_id}) does not match Booking Clinic ID (${booking.clinic_id})`);
+            console.log('To fix this, update the profile to match the booking (or vice versa).');
+        } else {
+            console.log('\nClinic IDs match. Problem might be date filtering or status.');
+        }
     }
 }
 
-checkData();
+debugData();

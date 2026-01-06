@@ -3,90 +3,127 @@
 ## Important Rules
 - ❌ No links in first email
 - ❌ No attachments in first email  
+- ❌ No proactive call offers (only if they request)
 - ✅ Short, personal, conversational
-- ✅ CTA favors written reply (not phone)
+- ✅ CTA favors written reply
+- ✅ Use "Labdien" (formal) for first contact
+- ✅ Sign off with "Ar cieņu" (With respect)
+
+## Optimal Send Time
+- 📅 **Best days:** Tuesday, Wednesday, Thursday
+- ⏰ **Best time:** 9:00 AM Latvian time
+- ❌ Avoid: Monday (inbox overflow), Friday (weekend mindset)
 
 ---
 
-## Version 1: SHORT (Direct)
+## Version 1: ONLINE BOOKING FOCUSED
 
-**Subject:** Jautājums par pacientu pierakstu
+**Tēma:** Par Jūsu mājaslapu
 
+```
+Labdien,
+
+Ceru, ka jaunais gads sācies labi!
+
+Apskatīju Jūsu klīnikas mājaslapu un redzēju, ka pieraksts notiek pa telefonu/e-pastu.
+
+Esmu izstrādājis sistēmu, kas ļauj pacientiem veikt pierakstu tiešsaistē visu diennakti, izmantojot logrīku Jūsu mājaslapā.
+
+Ja tas Jūs uzrunā, dodiet ziņu, un es labprāt nosūtīšu saiti uz video prezentāciju un plašāku aprakstu.
+
+Ar cieņu,
+Adrians
+```
+
+---
+
+## Version 2: ADMINISTRATOR FOCUS
+
+**Tēma:** Par tiešsaistes pierakstu
+
+```
+Labdien,
+
+Ceru, ka jaunais gads sācies labi!
+
+Ja Jūsu administratoram nākas veltīt daudz laika, atbildot uz zvaniem par pierakstu – tā ir normāla situācija daudzām klīnikām.
+
+Esmu izstrādājis sistēmu, kas ļauj pacientiem veikt pierakstu tiešsaistē 24/7. Tas ļauj administratoram pievērsties pacientu apkalpošanai klīnikā.
+
+Ja Jums ir interese, sazinieties ar mani, un es nosūtīšu sīkāku informāciju.
+
+Ar cieņu,
+Adrians
+```
+
+---
+
+## Version 3: LOST PATIENTS FOCUS (RECOMMENDED)
+
+**Tēma:** Īss jautājums
+
+```
 Sveiki,
 
-Esmu Adrians. Strādāju pie risinājuma, kas palīdz zobārstniecības klīnikām automatizēt pacientu atgādinājumus un online pierakstu.
+Ceru, ka jaunais gads sācies veiksmīgi!
 
-Vai jūs vēl zvanāt pacientiem, lai atgādinātu par vizītēm?
+Mans vārds ir Adrians. Strādāju ar zobārstniecības klīnikām Latvijā.
 
-Ja tas ir aktuāli, labprāt pastāstītu vairāk.
+Vai esat pamanījuši, cik daudz pacientu mēģina pierakstīties vakaros vai brīvdienās – tieši tad, kad administrators nestrādā?
 
+Esmu izveidojis tiešsaistes pieraksta logrīku, kas strādā 24/7 un automātiski aizpilda kalendāru.
+
+Ja tas Jūs interesē, dodiet ziņu – nosūtīšu īsu video ieskatu. Ja neaktuāli – viss kārtībā.
+
+Ar cieņu,
 Adrians
+```
 
 ---
 
-## Version 2: NEUTRAL (Benefit-focused)
+## Personalization Openers
 
-**Subject:** Kā samazināt neierašanos jūsu klīnikā
-
-Sveiki,
-
-Vai jūsu administratori vēl pavada laiku, zvanot pacientiem par vizītēm?
-
-Esmu izveidojis sistēmu, kas:
-• Automātiski sūta SMS atgādinājumus 24h pirms vizītes
-• Ļauj pacientiem pierakstīties online jebkurā laikā
-• Aizpilda "logus", kad kāds atceļ
-
-Klīnikas ziņo par ~30% mazāk neierašanos.
-
-Ja interesē – atrakstiet, un nosūtīšu info.
-
-Adrians
+| Scenario | Opening Line |
+|----------|--------------|
+| Phone-only booking | "Redzēju, ka Jūsu klīnikā pieraksts notiek pa telefonu..." |
+| Email booking | "Pamanīju, ka pieraksts notiek pa e-pastu..." |
+| Contact form | "Jūsu mājaslapa ir moderna, bet pieraksts iet caur kontaktformu..." |
+| Multiple doctors | "Redzēju, ka Jūsu klīnikā ir vairāki ārsti..." |
 
 ---
 
-## Version 3: ULTRA POLITE (Soft approach)
+## Follow-Up (5 days after no reply)
 
-**Subject:** Vai drīkstu pajautāt?
+**Tēma:** Re: [Sākotnējā tēma]
 
-Sveiki,
+```
+Labdien,
 
-Mans vārds ir Adrians, strādāju ar zobārstniecības klīnikām Latvijā.
+Tikai īss atgādinājums par manu iepriekšējo e-pastu.
 
-Gribēju pajautāt – vai jūsu klīnikā vēl manuāli zvana pacientiem, lai atgādinātu par vizītēm?
+Ja interese ir – atrakstiet, un nosūtīšu info.
+Ja nē – saprotu, un vairs netraucēšu.
 
-Ja jā, man ir risinājums, kas varētu ietaupīt laiku.
-
-Ja neaktuāli – nav problēmu. Bet ja interesē, droši atrakstiet.
-
+Ar cieņu,
 Adrians
+```
 
 ---
 
-## Version 4: FEATURE-FOCUSED (Permission-based)
+## If They Reply Interested → Send Demo Video
 
-**Subject:** Automatizēts pieraksts zobārstniecības klīnikām
+When they reply positively, respond with:
+- Demo video link
+- Pricing (€79/mēnesī)
+- 14-day free trial offer
 
-Sveiki!
-
-Izstrādāju pieraksta risinājumu zobārstniecības klīnikām:
-• Pacienti pierakstās online ar priekšapmaksu
-• Automātiski atgādinājumi (SMS/e-pasts)
-• Ikmēneša analītika
-• Automātiski Google atsauksmju pieprasījumi
-
-Ja interesē, labprāt nosūtīšu detalizētāku info.
-
-Vai to vēlaties?
-
-Adrians
+Only offer a call if THEY request it.
 
 ---
 
-## Spam & Tone Check Results
-✅ No links (will add in follow-up only)
-✅ No attachments
-✅ Conversational, not corporate ("Sveiki" not "Labdien")
-✅ No phone pressure – just "atrakstiet"
-✅ Short paragraphs
-✅ Sounds like a real person, not a template
+## Spam & Tone Check
+✅ No links, no attachments
+✅ Formal Latvian (Labdien / Ar cieņu)
+✅ Written reply CTA only
+✅ No call pressure
+✅ 50-70 words each

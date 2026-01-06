@@ -8,7 +8,7 @@ Labdien,
 
 Paldies par interesi!
 
-Mūsu cena ir €99/mēnesī. Tajā iekļauts:
+Mūsu cena ir €79/mēnesī. Tajā iekļauts:
 • Neierobežoti SMS atgādinājumi
 • Online pieraksta logrīks Jūsu mājaslapai
 • Visu ārstu kalendāri

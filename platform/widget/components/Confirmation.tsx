@@ -30,8 +30,8 @@ const Confirmation: React.FC<ConfirmationProps> = ({ language, booking }) => {
     const storageKey = `${clinicId}_booking_state`;
     sessionStorage.removeItem(storageKey);
     // Also clear legacy keys for backwards compatibility
-    sessionStorage.removeItem('butkevicaBookingState');
-    localStorage.removeItem('butkevicaBookingState');
+    sessionStorage.removeItem('demoBookingState');
+    localStorage.removeItem('demoBookingState');
   }, [clinicId]);
 
   const getEventDetails = () => {
@@ -47,7 +47,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({ language, booking }) => {
     return {
       title: `Dentist: ${booking.selectedService.name[language]}`,
       description: `Appointment with ${booking.selectedSpecialist?.name || 'Specialist'}. Service: ${booking.selectedService.name[language]}`,
-      location: 'Butkeviča Dental Practice',
+      location: 'Demo Clinic',
       start: startDate,
       end: endDate
     };
@@ -73,7 +73,7 @@ const Confirmation: React.FC<ConfirmationProps> = ({ language, booking }) => {
     const endStr = formatGoogleDate(eventDetails.end);
 
     // Clinic address for location
-    const clinicAddress = 'Dzirnavu iela 45, Centra rajons, Rīga, LV-1010';
+    const clinicAddress = 'Demo Street 123, City, Country';
 
     // Build the Google Calendar URL
     const calendarUrl = new URL('https://calendar.google.com/calendar/render');

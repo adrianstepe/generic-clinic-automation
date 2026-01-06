@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vizīte Apstiprināta - Inbox</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f1f5f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .email-wrapper {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2, 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .header {
+      background: #00bfa5;
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 10px 0 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .tooth-icon {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .greeting {
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+
+    .payment-confirmed {
+      background: #dcfce7;
+      color: #166534;
+      padding: 12px 20px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 25px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .info-title {
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: #1e293b;
+      font-size: 16px;
+    }
+
+    .info-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .info-item {
+      padding: 15px;
+      border-bottom: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    .info-item:nth-child(2n) {
+      border-right: none;
+    }
+
+    .info-item:nth-last-child(-n+2) {
+      border-bottom: none;
+    }
+
+    .info-icon {
+      font-size: 18px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    .info-label {
+      color: #64748b;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .info-value {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 14px;
+    }
+
+    .address-box {
+      grid-column: 1 / -1;
+      border-top: 1px solid #e2e8f0;
+      padding: 15px;
+      border-right: none;
+      border-bottom: none !important;
+    }
+
+    .actions {
+      text-align: center;
+      margin: 30px 0;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #0d9488;
+      color: white !important;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 5px;
+      font-size: 14px;
+    }
+
+    .btn-outline {
+      background: white;
+      color: #0d9488 !important;
+      border: 2px solid #0d9488;
+      padding: 10px 22px;
+    }
+
+    .warning {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 25px 0;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #92400e;
+    }
+
+    .cancel-section {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .cancel-section p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    .btn-cancel {
+      color: #dc2626 !important;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    /* Mobile Responsiveness */
+    @media only screen and (max-width: 600px) {
+      .email-wrapper {
+        margin: 0;
+        border-radius: 0;
+      }
+
+      .info-grid {
+        display: block;
+      }
+
+      .info-item {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .info-item:last-child {
+        border-bottom: none;
+      }
+
+      .address-box {
+        border-top: 1px solid #e2e8f0;
+      }
+    }
+
+    /* Fake Gmail Wrapper */
+    .fake-gmail-ui {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body style="background: #f5f5f5;">
+
+  <!-- Fake Inbox Wrapper to frame it nicely -->
+  <div class="fake-gmail-ui">
+    <div style="font-size: 20px; margin-bottom: 20px;">✅ Vizīte Apstiprināta: 2026-01-06 plkst. 16:00</div>
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+      <div
+        style="background: #00bfa5; width: 40px; height: 40px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+        D</div>
+      <div>
+        <div style="font-weight: bold; font-size: 14px;">Demo Clinic <span
+            style="font-weight: normal; color: #555;">&lt;info@democlinic.com&gt;</span></div>
+        <div style="font-size: 12px; color: #555;">to me</div>
+      </div>
+    </div>
+
+    <!-- Actual Email Content -->
+    <div class="email-wrapper">
+      <div class="header">
+        <span class="tooth-icon">🦷</span>
+        <h1>Vizīte Apstiprināta!</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Labdien, <strong>Adrians Stepe</strong>!</p>
+        <div class="payment-confirmed">✅ Paldies! Jūsu maksājums <strong>€30.00</strong> apmērā ir saņemts.</div>
+
+        <div class="info-title">Jūsu vizītes informācija:</div>
+        <div class="info-card">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Datums</span>
+              <div class="info-value"><span class="info-icon">📅</span> 6. janvāris, 2026</div>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Laiks</span>
+              <div class="info-value"><span class="info-icon">⏰</span> 16:00</div>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Pakalpojums</span>
+              <div class="info-value"><span class="info-icon">🏥</span> Zobu balināšana</div>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Speciālists</span>
+              <div class="info-value"><span class="info-icon">👨‍⚕️</span> Dr. Ieva Bērziņa</div>
+            </div>
+            <div class="info-item address-box">
+              <span class="info-label">Adrese</span>
+              <div class="info-value">
+                <span class="info-icon">📍</span>
+                <a href="#" style="color: #0d9488; text-decoration: none;">Demo iela 123, Rīga, Latvija</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a href="#" class="btn">📅 Pievienot Kalendāram</a>
+          <a href="#" class="btn btn-outline">📍 Skatīt Kartē</a>
+        </div>
+
+        <div class="warning">
+          <strong>Lūdzu, ņemiet vērā:</strong> Atceļot vizīti mazāk nekā 24 stundas pirms sākuma, rezervācijas maksa
+          €30.00 netiek atgriezta.
+        </div>
+
+        <div class="cancel-section">
+          <p>Nepieciešams atcelt vizīti?</p>
+          <a href="#" class="btn-cancel">Atcelt Vizīti</a>
+        </div>
+
+        <div class="footer">
+          <p>Ar cieņu,<br><strong>Demo Clinic</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>

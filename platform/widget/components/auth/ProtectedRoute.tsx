@@ -11,6 +11,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const { user, loading } = useUser();
     const location = useLocation();
 
+    // DEMO MODE: Allow access with ?demo=true for video recording
+    const isDemoMode = new URLSearchParams(location.search).get('demo') === 'true';
+
+    if (isDemoMode) {
+        console.log('[ProtectedRoute] Demo mode enabled - bypassing auth');
+        return <>{children}</>;
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">

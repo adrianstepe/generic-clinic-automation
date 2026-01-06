@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Generate or retrieve session ID
 const getSessionId = (): string => {
-    const key = 'butkevica_analytics_session';
+    const key = 'demo_analytics_session';
     let sessionId = sessionStorage.getItem(key);
 
     if (!sessionId) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Calendar, Users, Stethoscope, Clock } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 
@@ -13,7 +13,11 @@ interface NavItem {
 
 const Sidebar: React.FC = () => {
     const { profile } = useUser();
+    const location = useLocation();
     const isDoctor = profile?.role === 'doctor';
+
+    // Check if we're in demo mode
+    const isDemoMode = new URLSearchParams(location.search).get('demo') === 'true';
 
     const navItems: NavItem[] = [
         { icon: Home, label: 'Pārskats', path: '/dashboard', end: true },
@@ -23,11 +27,16 @@ const Sidebar: React.FC = () => {
         { icon: Users, label: 'Speciālisti', path: '/dashboard/specialists', adminOnly: true },
     ];
 
-    // Filter items based on role
-    const visibleItems = navItems.filter(item => !item.adminOnly || !isDoctor);
+    // Filter items based on role (show all in demo mode)
+    const visibleItems = isDemoMode
+        ? navItems
+        : navItems.filter(item => !item.adminOnly || !isDoctor);
 
     // Dynamic title based on role
-    const portalTitle = isDoctor ? 'Ārsta Panelis' : 'Admin Panelis';
+    const portalTitle = isDoctor && !isDemoMode ? 'Ārsta Panelis' : 'Admin Panelis';
+
+    // Helper to append demo param
+    const getPath = (path: string) => isDemoMode ? `${path}?demo=true` : path;
 
     return (
         <aside className="w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 hidden md:flex flex-col">
@@ -41,7 +50,7 @@ const Sidebar: React.FC = () => {
                 {visibleItems.map((item) => (
                     <NavLink
                         key={item.path}
-                        to={item.path}
+                        to={getPath(item.path)}
                         end={item.end}
                         className={({ isActive }) => `
                             flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
@@ -58,7 +67,7 @@ const Sidebar: React.FC = () => {
 
             <div className="p-4 border-t border-gray-200 dark:border-slate-700">
                 <div className="text-xs text-slate-400 text-center">
-                    v1.3.0 • {isDoctor ? 'Ārsta' : 'Admin'} Edition
+                    v1.3.0 • {isDemoMode ? 'Demo' : (isDoctor ? 'Ārsta' : 'Admin')} Edition
                 </div>
             </div>
         </aside>
@@ -66,3 +75,4 @@ const Sidebar: React.FC = () => {
 };
 
 export default Sidebar;
+
