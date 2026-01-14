@@ -135,9 +135,9 @@ export async function onRequestPost(context) {
         });
 
     } catch (err) {
+        console.error('[ProcessCancellation] Error:', err.message, err.stack);
         return new Response(JSON.stringify({
-            error: err.message,
-            stack: err.stack
+            error: 'Internal server error'
         }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }

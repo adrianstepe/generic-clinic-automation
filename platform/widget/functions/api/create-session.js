@@ -16,9 +16,18 @@ export async function onRequestPost(context) {
     try {
         const body = await request.json();
 
-        // API Key Strategy: Use env var from Pages Settings
-        // Fallback key is for DEMO PURPOSES ONLY.
-        const STRIPE_KEY = env.STRIPE_SECRET_KEY || 'sk_test_51SX3fTPj1OTNtDrGF3gdymNxmZKDuhiw2s6HP62JWi1YkhAqcbFN7TX8ryExaRE6IgOGLUkcBAdukKv8aELrJEFA00OqFXAHne';
+        // API Key Strategy: Use env var from Pages Settings (NEVER commit keys to code)
+        const STRIPE_KEY = env.STRIPE_SECRET_KEY;
+
+        if (!STRIPE_KEY) {
+            console.error('[CreateSession] Missing STRIPE_SECRET_KEY environment variable');
+            return new Response(JSON.stringify({
+                error: 'Server configuration error: Stripe not configured'
+            }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
 
         // Construct form-urlencoded body for Stripe API
         const formData = new URLSearchParams();
