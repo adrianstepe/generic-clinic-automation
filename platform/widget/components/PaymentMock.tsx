@@ -200,67 +200,57 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
         }
       }
 
-      // 4. Call Stripe API Directly (Client-Side Mock for Demo)
-      // WARNING: This exposes the Secret Key. ONLY for localhost demo.
-      console.log('[PaymentMock] initializing direct Stripe call...');
-      const STRIPE_KEY = 'sk_test_51SX3fTPj1OTNtDrGF3gdymNxmZKDuhiw2s6HP62JWi1YkhAqcbFN7TX8ryExaRE6IgOGLUkcBAdukKv8aELrJEFA00OqFXAHne';
-
-      const formData = new URLSearchParams();
-      formData.append('payment_method_types[]', 'card');
-      formData.append('payment_method_types[]', 'link');
-      formData.append('line_items[0][price_data][currency]', 'eur');
-      formData.append('line_items[0][price_data][product_data][name]', service.name[Language.EN] || 'Dental Service');
-      formData.append('line_items[0][price_data][unit_amount]', String(amountInCents));
-      formData.append('line_items[0][quantity]', '1');
-      formData.append('mode', 'payment');
-      formData.append('success_url', successUrl);
-      formData.append('cancel_url', cancelUrl);
-      formData.append('locale', 'auto');
-
-      // Metadata for n8n Webhook
-      formData.append('metadata[booking_date]', isoDate);
-      if (booking.selectedTime) formData.append('metadata[booking_time]', booking.selectedTime);
-      formData.append('metadata[service_id]', service.id);
-      formData.append('metadata[serviceName]', service.name[booking.language] || service.name[Language.EN]);
-      formData.append('metadata[language]', booking.language);
-      if (service.durationMinutes) formData.append('metadata[duration]', String(service.durationMinutes));
-      if (booking.selectedSpecialist?.id) formData.append('metadata[doctor_id]', booking.selectedSpecialist.id);
-      if (booking.selectedSpecialist?.name) formData.append('metadata[doctor_name]', booking.selectedSpecialist.name);
-      if (pendingBookingId) formData.append('metadata[pending_booking_id]', pendingBookingId);
-      formData.append('metadata[clinic_id]', clinicId);
-      if (clinic.clinicEmail) formData.append('metadata[clinic_email]', clinic.clinicEmail);
+      // 4. Call our secure server-side Stripe session endpoint
+      // The Stripe secret key is stored securely in Cloudflare environment variables
+      console.log('[PaymentMock] Creating Stripe session via secure server endpoint...');
 
       const fullName = `${booking.patientData.firstName} ${booking.patientData.lastName}`;
-      formData.append('metadata[customer_name]', fullName);
-      formData.append('metadata[customer_email]', booking.patientData.email);
-      if (booking.patientData.phone) formData.append('metadata[customer_phone]', booking.patientData.phone);
-      formData.append('customer_email', booking.patientData.email);
 
-      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${STRIPE_KEY}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData
+      // Build metadata object for the session
+      const metadata = {
+        booking_date: isoDate,
+        booking_time: booking.selectedTime || undefined,
+        service_id: service.id,
+        serviceName: service.name[booking.language] || service.name[Language.EN],
+        language: booking.language,
+        duration: service.durationMinutes ? String(service.durationMinutes) : undefined,
+        doctor_id: booking.selectedSpecialist?.id || undefined,
+        doctor_name: booking.selectedSpecialist?.name || undefined,
+        pending_booking_id: pendingBookingId || undefined,
+        clinic_id: clinicId,
+        clinic_email: clinic.clinicEmail || undefined,
+        customer_name: fullName,
+        customer_email: booking.patientData.email,
+        customer_phone: booking.patientData.phone || undefined
+      };
+
+      // Remove undefined values
+      Object.keys(metadata).forEach(key => {
+        if (metadata[key as keyof typeof metadata] === undefined) {
+          delete metadata[key as keyof typeof metadata];
+        }
       });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        let errorMessage = response.statusText;
-        try {
-          const errJson = JSON.parse(errText);
-          errorMessage = errJson.error || errorMessage;
-        } catch (e) {
-          errorMessage = errText || errorMessage;
-        }
-        throw new Error(`Payment Error: ${errorMessage}`);
-      }
+      const response = await fetch('/api/create-stripe-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount_cents: amountInCents,
+          service_name: service.name[Language.EN] || 'Dental Service',
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          customer_email: booking.patientData.email,
+          currency: clinic.settings?.currency === 'USD' ? 'usd' : 'eur',
+          metadata
+        })
+      });
 
       const data = await response.json();
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Payment session creation failed');
       }
 
       if (!data.url) {

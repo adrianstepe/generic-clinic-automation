@@ -32,9 +32,9 @@
 
 | # | Clinic | Website | Email | Phone | Doctors | Booking | Status |
 |---|--------|---------|-------|-------|---------|---------|--------|
-| 1 | *ComfortDent | comfortdent.lv | info@comfortdent.lv | +371 29713775 | ~3 | Phone | [ ] |
-| 2 | Smile Office | smileoffice.lv | - | +371 23302158 | ~3 | Phone/Form | [ ] |
-| 3 | *Zobikate | zobikate.lv | zobikate@gmail.com | +371 28 370 046 | ~3 | Phone/Email | [ ] |
+| 1 | *ComfortDent | comfortdent.lv | info@comfortdent.lv | +371 29713775 | ~3 | Phone | [SENT] |
+| 2 | Smile Office | smileoffice.lv | - | +371 23302158 | ~3 | Phone/Form | [SENT] |
+| 3 | *Zobikate | zobikate.lv | zobikate@gmail.com | +371 28 370 046 | ~3 | Phone/Email | [SENT] |
 | 4 | ~~Dental Shop~~ | ~~dentalshopclinic.lv~~ | ~~info@dentalshopclinic.lv~~ | ~~+371 23 079 205~~ | ~~4~~ | ~~Phone/Email~~ | ~~[SKIP - NOT DENTAL]~~ |
 | 5 | ~~MigDent~~ | ~~migdent.lv~~ | ~~migdentlv@gmail.com~~ | ~~+371 220-220-77~~ | ~~4~~ | ~~Phone/Email~~ | ~~[FORWARDED to Manager]~~ |
 
@@ -46,9 +46,9 @@
 | 11 | ~~NADORA~~ | ~~nadora.lv~~ | ~~info@nadora.lv~~ | ~~+371 20417788~~ | ~~5~~ | ~~Phone/Email~~ | ~~[NEGOTIATING - Dendoo Integration]~~ |
 
 | 12 | ~~Smaida Līnija~~ | ~~smaidalinija.lv~~ | ~~sveiki@smaidalinija.lv~~ | ~~+371 28688877~~ | ~~5~~ | ~~Phone/Form~~ | ~~[CONTACTED - No Reply]~~ |
-| 13 | 33. Zobs | 33zobs.lv | 33zobs@inbox.lv | +371 67270099 | ~5 | Phone/Email | [ ] |
+| 13 | 33. Zobs | 33zobs.lv | 33zobs@inbox.lv | +371 67270099 | ~5 | Phone/Email | [SENT] |
 | 14 | ELSIA | elsia.lv | info@cerec.lv | +371 267-267-04 | ~5 | Phone/Email | [ ] |
-| 15 | Avakons | avakons.lv | avakons@avakons.lv | +371 22827898 | ~5 | Phone/Email | [ ] |
+| 15 | Avakons | avakons.lv | avakons@avakons.lv | +371 22827898 | ~5 | Phone/Email | [SENT] |
 | 16 | Aurora Dental | auroradental.lv | - | +371 67 373 654 | ~5 | Phone | [ ] |
 
 ---

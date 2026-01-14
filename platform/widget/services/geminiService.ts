@@ -1,53 +1,52 @@
-import { GoogleGenAI } from "@google/genai";
 import { fetchServices } from './configService';
 import { Language, Service } from '../types';
 import { SERVICES as FALLBACK_SERVICES } from '../constants';
 
+/**
+ * Suggests a service based on patient symptoms using AI.
+ * This now calls a secure server-side endpoint instead of exposing the API key.
+ */
 export const suggestService = async (symptoms: string, language: Language): Promise<string | null> => {
   try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("API Key not found, skipping AI suggestion");
-      return null;
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-
     // Fetch services dynamically (with fallback)
     let services: Service[];
     try {
       services = await fetchServices();
-    } catch {
+    } catch (error) {
       services = FALLBACK_SERVICES;
     }
 
-    // Create a lean prompt context
-    const serviceList = services.map(s => `${s.id}: ${s.name[Language.EN]} (${s.description[Language.EN]})`).join('\n');
+    // Prepare service data for the server
+    const serviceData = services.map(s => ({
+      id: s.id,
+      name: s.name[Language.EN],
+      description: s.description[Language.EN]
+    }));
 
-    const prompt = `
-      You are a dental receptionist assistant.
-      Here are the available services:
-      ${serviceList}
-      
-      The patient describes their symptoms as: "${symptoms}".
-      
-      Based on this description, return ONLY the ID of the most appropriate service (e.g., "s1"). 
-      If unsure or if it's general pain, return "s1" (Consultation).
-      Do not return any other text.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
+    // Call the secure server-side endpoint
+    const response = await fetch('/api/suggest-service', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        symptoms,
+        services: serviceData
+      })
     });
 
-    const text = response.text?.trim();
-    if (text && services.some(s => s.id === text)) {
-      return text;
+    const data = await response.json();
+
+    if (data.success && data.service_id) {
+      // Validate that the returned ID exists in services
+      if (services.some(s => s.id === data.service_id)) {
+        return data.service_id;
+      }
     }
-    return 's1';
+
+    return 's1'; // Default to consultation
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Service suggestion error:", error);
     return null;
   }
 };
