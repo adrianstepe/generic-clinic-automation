@@ -6,7 +6,7 @@ interface BookingWidgetProps {
 
 const BookingWidget = ({ clinicId = "butkevica" }: BookingWidgetProps) => {
   // Build widget URL with clinicId parameter
-  const widgetUrl = `https://test1-3oj.pages.dev/?clinicId=${clinicId}`;
+  const widgetUrl = `https://generic-clinic-automation.pages.dev/?clinicId=${clinicId}`;
 
   return (
     <div
