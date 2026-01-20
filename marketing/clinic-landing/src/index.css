@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Premium Dental Clinic Design System
+   Color palette: Soft cream backgrounds, deep teal primary, warm gold accents
+   Typography: Outfit for display, Inter for body
+*/
+
+@layer base {
+  :root {
+    /* Soft cream background */
+    --background: 40 33% 98%;
+    --foreground: 200 25% 15%;
+
+    /* Card - pure white for contrast */
+    --card: 0 0% 100%;
+    --card-foreground: 200 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 25% 15%;
+
+    /* Primary - Deep teal */
+    --primary: 175 45% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft warm gray */
+    --secondary: 40 20% 94%;
+    --secondary-foreground: 200 25% 15%;
+
+    /* Muted - Warm gray tones */
+    --muted: 40 15% 92%;
+    --muted-foreground: 200 10% 45%;
+
+    /* Accent - Warm gold */
+    --accent: 38 80% 55%;
+    --accent-foreground: 200 25% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 40 15% 88%;
+    --input: 40 15% 88%;
+    --ring: 175 45% 30%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 200 25% 10%;
+    --foreground: 40 33% 98%;
+    --card: 200 25% 12%;
+    --card-foreground: 40 33% 98%;
+    --popover: 200 25% 12%;
+    --popover-foreground: 40 33% 98%;
+    --primary: 175 45% 45%;
+    --primary-foreground: 200 25% 10%;
+    --secondary: 200 20% 18%;
+    --secondary-foreground: 40 33% 98%;
+    --muted: 200 20% 20%;
+    --muted-foreground: 40 10% 60%;
+    --accent: 38 80% 55%;
+    --accent-foreground: 200 25% 10%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 200 20% 20%;
+    --input: 200 20% 20%;
+    --ring: 175 45% 45%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .shadow-soft {
+    box-shadow: 0 4px 20px -2px hsl(var(--foreground) / 0.06);
+  }
+
+  .shadow-elegant {
+    box-shadow: 0 20px 50px -12px hsl(var(--primary) / 0.15),
+                0 8px 20px -8px hsl(var(--foreground) / 0.08);
+  }
+
+  /* Gradient radial utility */
+  .bg-gradient-radial {
+    background: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+  }
+}
+
+/* Smooth scroll for the whole page */
+html {
+  scroll-behavior: smooth;
+}

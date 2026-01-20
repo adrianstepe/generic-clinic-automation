@@ -1,0 +1,42 @@
+[
+    {
+        "name": "ERA Esthetic Dental",
+        "doctor_name": "Dr. Jūlija Jurgele",
+        "current_website": "eradental.lv",
+        "phone": "+371 25333303",
+        "email": "info@eradental.lv",
+        "slug": "era-esthetic-dental"
+    },
+    {
+        "name": "X-Dental",
+        "doctor_name": "TBD",
+        "current_website": "xdental.lv",
+        "phone": "+371 67552431",
+        "email": "xdental@balticom.lv",
+        "slug": "x-dental"
+    },
+    {
+        "name": "Aurora Dental",
+        "doctor_name": "TBD",
+        "current_website": "auroradental.lv",
+        "phone": "+371 67373654",
+        "email": "info@auroradental.lv",
+        "slug": "aurora-dental"
+    },
+    {
+        "name": "Maxilla",
+        "doctor_name": "TBD",
+        "current_website": "maxilla.lv",
+        "phone": "+371 66002528",
+        "email": "info@maxilla.lv",
+        "slug": "maxilla"
+    },
+    {
+        "name": "Premium Dental",
+        "doctor_name": "TBD",
+        "current_website": "premiumdental.lv",
+        "phone": "+371 27323940",
+        "email": "info@premiumdental.lv",
+        "slug": "premium-dental"
+    }
+]

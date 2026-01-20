@@ -23,7 +23,7 @@
 
 | Clinic | Contact | Status | Notes |
 |--------|---------|--------|-------|
-| **NADORA** | Info/Admin | **NEGOTIATING** | PROPOSED: Custom Dendoo integration for Pilot. Waiting for acceptance. |
+| **NADORA** | Info/Admin | **STALLED** | Sent "Break-up" email (19.01). Stalled on Trust/Registration issues. |
 
 
 ---

@@ -10,11 +10,19 @@ import { Language, BookingState } from './types';
 import { useConfig } from './hooks/useConfig';
 import { useAnalytics } from './hooks/useAnalytics';
 import { checkAvailability } from './services/api';
+import { supabase } from './supabaseClient';
 
 const BookingWidget: React.FC = () => {
     // Get full config context to access clinicId
     const { texts, clinicId } = useConfig();
     const { trackStep, trackLanguageChange, trackBookingComplete } = useAnalytics();
+
+    // Standalone mode detection (full-screen vs overlay widget)
+    const [isStandalone] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        const params = new URLSearchParams(window.location.search);
+        return params.get('mode') === 'standalone';
+    });
 
     const STORAGE_KEY = `${clinicId}_booking_state`;
 
@@ -138,7 +146,33 @@ const BookingWidget: React.FC = () => {
         setBooking(prev => ({ ...prev, patientData: { ...prev.patientData, ...data } }));
     };
 
+    // Lead Capture: Save patient data to Supabase before payment step
+    const saveLeadToSupabase = async () => {
+        const { firstName, lastName, email, phone } = booking.patientData;
+        if (!email || !clinicId) return;
+
+        try {
+            await supabase.from('leads').upsert({
+                clinic_id: clinicId,
+                email: email.toLowerCase().trim(),
+                phone: phone || null,
+                first_name: firstName || null,
+                last_name: lastName || null,
+                service_id: booking.selectedService?.id || null,
+                captured_at_step: 3
+            }, { onConflict: 'clinic_id,email' });
+            console.log('[Lead Capture] Saved lead to Supabase');
+        } catch (error) {
+            console.error('[Lead Capture] Failed (fail-open):', error);
+            // Fail-open: don't block user from proceeding
+        }
+    };
+
     const nextStep = () => {
+        // Capture lead before payment step (fire-and-forget)
+        if (booking.step === 3) {
+            saveLeadToSupabase();
+        }
         if (booking.step < 5) {
             updateBooking({ step: booking.step + 1 });
         }
@@ -194,7 +228,7 @@ const BookingWidget: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-20 transition-colors duration-300">
+        <div className={`min-h-[100dvh] transition-colors duration-300 ${isStandalone ? 'bg-white dark:bg-slate-900' : 'bg-gray-50 dark:bg-slate-900 pb-20'}`}>
             <Header
                 currentLanguage={booking.language}
                 setLanguage={(lang) => updateBooking({ language: lang })}
@@ -202,7 +236,7 @@ const BookingWidget: React.FC = () => {
                 toggleTheme={toggleTheme}
             />
 
-            <main className="max-w-3xl mx-auto bg-white dark:bg-slate-800 min-h-[calc(100vh-64px)] shadow-xl sm:my-8 sm:rounded-2xl sm:min-h-fit overflow-hidden transition-colors duration-300">
+            <main className={`bg-white dark:bg-slate-800 overflow-hidden transition-colors duration-300 ${isStandalone ? 'w-full min-h-[calc(100dvh-64px)]' : 'max-w-3xl mx-auto min-h-[calc(100dvh-64px)] shadow-xl sm:my-8 sm:rounded-2xl sm:min-h-fit'}`}>
                 {booking.step < 5 && (
                     <ProgressBar currentStep={booking.step} language={booking.language} />
                 )}
@@ -257,7 +291,7 @@ const BookingWidget: React.FC = () => {
 
                 {/* Footer Navigation (Sticky on Mobile) */}
                 {booking.step < 5 && booking.step !== 4 && (
-                    <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t dark:border-slate-700 p-4 flex justify-between items-center sm:relative sm:border-0 sm:bg-transparent dark:sm:bg-transparent transition-colors duration-300">
+                    <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t dark:border-slate-700 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center sm:relative sm:border-0 sm:bg-transparent dark:sm:bg-transparent transition-colors duration-300">
                         <button
                             onClick={prevStep}
                             disabled={booking.step === 1}

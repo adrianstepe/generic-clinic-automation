@@ -48,6 +48,9 @@ Kad paraksti līgumu ar jaunu zobārstniecības klīniku, izmanto šo kontrolsar
 - [ ] Savienot Gmail OAuth n8n
 - [ ] Savienot klīnikas īpašnieka Google Calendar n8n
 - [ ] Pārbaudīt kalendāra atļaujas
+- [ ] **⚠️ KRITISKS: Publicēt Google Cloud App "Production" režīmā** - Pretējā gadījumā OAuth tokens beigsies pēc 7 dienām!
+  - Google Cloud Console → APIs & Services → OAuth consent screen → "Publish App"
+  - Pirmajā autentifikācijā parādīsies "Google hasn't verified this app" - spiest "Advanced" → "Go to [app name]"
 
 ### n8n Workflows
 - [ ] Klonēt bāzes workflow veidnes

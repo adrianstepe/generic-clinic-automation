@@ -98,7 +98,7 @@ export async function onRequestPost(context) {
         console.log('[Webhook] Received event type:', event.type);
 
         // Forward to n8n
-        const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://n8n.srv1152467.hstgr.cloud/webhook/stripe-confirmation-webhook';
+        const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://n8n.srv1242088.hstgr.cloud/webhook/stripe-confirmation-webhook';
 
         if (event.type === 'checkout.session.completed') {
             console.log('[Webhook] Forwarding to n8n:', N8N_WEBHOOK_URL);

@@ -901,3 +901,215 @@ Webhook → Filter Event → Extract Data → Fetch Specialists → Auto-Assign
                                    Email + Calendar            Email + Calendar
 ```
 
+### 6.19 SMS Reminders via Twilio (Implemented, Disabled by Default)
+
+**Status:** ✅ Implemented | ⏸️ Disabled (cost-saving)
+
+**Reason Disabled:** Requires purchasing a Twilio phone number (~$1/month + ~$0.05-0.08 per SMS).
+
+**Implementation Details:**
+- SMS sending nodes exist in `n8n-7-daily-reminders-and-recall.json`
+- Triggered alongside email reminders (24h before appointment)
+- Tri-lingual support: EN, LV, RU (matched to booking language)
+
+**Activation Requirements:**
+| Step | Action |
+|------|--------|
+| 1 | Upgrade Twilio account from Trial to Paid (removes "Sent from trial" prefix) |
+| 2 | Purchase Latvian phone number (+371) for professional appearance |
+| 3 | Add Twilio credentials to n8n (Account SID + Auth Token) |
+| 4 | Enable SMS nodes in n8n workflow (currently disabled) |
+| 5 | Update booking confirmation email to include SMS opt-out link |
+
+**Cost per Client:**
+- ~€25-40/month for 500 SMS
+- Can be passed to client or included in package pricing
+
+**Sales Note:**
+> *"SMS reminders are an optional add-on that reduces no-shows by 30%. Available for €25/month."*
+
+---
+
+### 6.20 Phone Number Validation (Known Issue)
+
+**Status:** 🐛 Bug — Phone numbers sometimes not saving to Supabase
+
+**Symptoms:**
+- Widget collects phone number
+- Stripe metadata contains phone
+- Supabase `bookings.customer_phone` is NULL
+
+**Suspected Causes:**
+1. Empty string sent when phone field is optional and left blank
+2. Phone validation regex rejecting valid formats
+3. n8n extraction node not parsing phone from metadata
+
+**Workaround:** Phone is currently optional. SMS reminders fall back to email.
+
+**TODO:** Debug n8n Code node extracting `customer_phone` from Stripe metadata.
+
+---
+
+### 6.21 Future Integrations (Roadmap)
+
+**Status:** 📋 Planned | Not Implemented
+
+| Integration | Priority | Notes |
+|-------------|----------|-------|
+| Outlook Calendar | Medium | Many clinics use Microsoft 365 |
+| Apple Calendar (iCal feed) | Low | Export-only, no write-back |
+| Curve/Oryx PMS | High | Popular dental management systems in EU |
+| Dendoo | High | Nadora clinic uses this—API research needed |
+| WhatsApp Business API | Medium | Higher engagement than SMS in Latvia |
+
+**Architecture Note:** These would be additional n8n nodes, not widget changes.
+
+---
+
+### 6.22 Security: Two-Factor Authentication (Recommended)
+
+**Status:** ⚠️ Not Implemented | Recommended for Production
+
+**Risk:** Health-adjacent data (service type + patient name) qualifies as sensitive under GDPR Art. 9.
+
+**Recommendation:**
+| Area | Current | Recommended |
+|------|---------|-------------|
+| Admin Dashboard | Supabase Auth (email/password) | Add 2FA via Supabase Auth or Auth0 |
+| Super Admin | Supabase Auth + email whitelist | Enforce 2FA for super-admin access |
+| n8n | HTTP Basic Auth | Move behind VPN or add IP whitelist |
+
+**Implementation Path:**
+1. Enable "MFA" in Supabase Auth settings
+2. Require MFA enrollment on first admin login
+3. Add `mfa_verified` check to RLS policies
+
+---
+
+### 6.23 Payment Options & Flexibility
+
+**Status:** ✅ Stripe Checkout | 🔶 SEPA Partially Supported
+
+**Current Implementation:**
+- Stripe Checkout handles card payments
+- SEPA Direct Debit available if enabled in Stripe account
+- No configuration UI exposed to widget
+
+**Deposit vs Full Payment:**
+| Mode | Current Status |
+|------|----------------|
+| Fixed deposit (e.g., €30) | ✅ Implemented |
+| Per-service deposit | ✅ Supported via `clinic_services.price_cents` |
+| Full prepayment | 🔶 Possible but not exposed in UI |
+| Pay at clinic (no payment) | ❌ Not supported (payment required for booking) |
+
+**Future Enhancement:** Add `payment_mode` column to `clinics` table:
+- `deposit_fixed` — Current behavior
+- `deposit_percentage` — 20% of service price
+- `full_prepayment` — 100% upfront
+- `pay_at_clinic` — Skip Stripe, direct to n8n
+
+---
+
+### 6.24 Mobile Widget Responsiveness
+
+**Status:** ✅ Implemented | 🔶 Not Formally Tested
+
+**Implementation:**
+- Tailwind CSS responsive classes throughout
+- Mobile-first layout in `BookingWidget.tsx`
+- Touch-friendly buttons and inputs
+
+**Known Issues:** None reported.
+
+**Recommendation:** Add mobile screenshot to walkthrough.md for each client onboarding.
+
+---
+
+### 6.25 Google OAuth Production Mode (CRITICAL)
+
+**Status:** ⚠️ Must Configure Per Client
+
+**Problem:** Google Cloud OAuth in "Testing" mode expires refresh tokens after 7 days.
+
+**Symptoms:**
+- n8n Gmail/Calendar nodes fail after ~1 week
+- Error: "Token has been expired or revoked"
+
+**Fix (Required for Every Client):**
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Navigate to **APIs & Services → OAuth consent screen**
+3. Click **"Publish App"** to change status from "Testing" to "In production"
+4. Accept the verification notice (no actual verification required for internal use)
+
+**Warning Display:**
+> After publishing, users see "Google hasn't verified this app" screen on first auth. Click **"Advanced" → "Go to [app name] (unsafe)"** to proceed.
+
+**Added to:** `directives/client-onboarding-checklist.md`
+
+---
+
+### 6.26 Analytics Deployment Verification
+
+**Status:** ✅ Implemented | 🔶 No Verification Documented
+
+**Components:**
+| Component | File | Status |
+|-----------|------|--------|
+| React hook | `hooks/useAnalytics.ts` | ✅ Deployed |
+| Cloudflare endpoint | `functions/api/track-event.js` | ✅ Deployed |
+| Database schema | `sql/analytics_migration.sql` | ✅ Run |
+| Monthly report workflow | `workflows/n8n-9-monthly-analytics.json` | ✅ Active |
+
+**Verification Steps:**
+1. Open widget → Check browser console for `track-event` network requests
+2. Query Supabase: `SELECT * FROM booking_events ORDER BY created_at DESC LIMIT 10`
+3. Confirm monthly report email arrives on 1st of month
+
+**TODO:** Add automated test to Cloudflare deployment pipeline.
+
+---
+
+### 6.27 Code Cleanup Notes
+
+**Redundant Files Identified:**
+
+| File | Keep/Remove | Reason |
+|------|-------------|--------|
+| `functions/api/create-session.js` | ✅ Keep | Primary Stripe session creator |
+| `functions/api/create-stripe-session.js` | ❓ Review | Appears redundant—may be legacy |
+
+**Recommendation:** Diff the two files. If identical, delete `create-stripe-session.js`.
+
+---
+
+### 6.28 Known Limitations & Scope Boundaries
+
+**Explicitly Out of Scope (by design):**
+
+| Feature | Reason |
+|---------|--------|
+| Full EMR/EHR integration | Regulatory complexity, requires HIPAA/MDR compliance |
+| Automatic clinical charting | Outside booking automation scope |
+| Insurance processing | Varies by country, complex integrations |
+| Video consultations | Different product category |
+
+**Sales Response:**
+> *"Our system is focused on lead capture and booking automation. Clinical workflows remain in your existing practice management system. We integrate with PMS for appointment sync where APIs are available."*
+
+---
+
+## 9. Document Revision History
+
+| Date | Section | Change |
+|------|---------|--------|
+| 2025-12-07 | 6.1-6.4 | Initial architecture fixes |
+| 2025-12-09 | 6.7-6.8 | Supabase native nodes, DLQ |
+| 2025-12-14 | 6.9-6.12 | Multi-language, analytics, slot locking |
+| 2025-12-17 | 6.13 | Build optimization |
+| 2025-12-18 | 6.14 | Auto-assignment |
+| 2025-12-22 | 6.15-6.16 | Multi-tenant branding, super admin |
+| 2025-12-23 | 6.17 | RLS performance fixes |
+| 2025-12-24 | 6.18 | Multi-specialist capacity |
+| 2026-01-14 | 6.19-6.28 | Gap analysis documentation (SMS, phone bug, 2FA, payment options, Google OAuth, analytics, code cleanup, scope boundaries) |
+
