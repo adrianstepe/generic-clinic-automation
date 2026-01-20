@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { useUser } from '@/contexts/UserContext';
 import { Plus, Pencil, Trash2, X, Save, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useConfig } from '@/hooks/useConfig';
 import { SERVICES as DEMO_SERVICES } from '@/constants';
 import { Language } from '@/types';
 
@@ -31,25 +32,26 @@ const getCategoryLabel = (category: string): string => {
     return CATEGORY_LABELS[category.toLowerCase()] || CATEGORY_LABELS[category] || category;
 };
 
+// ... imports ...
+
 const ServicesPage: React.FC = () => {
     const { profile } = useUser();
+    const { clinicId } = useConfig();
     const location = useLocation();
+    const isDemoMode = clinicId === 'demo-clinic' || clinicId === 'sample';
+
     const [services, setServices] = useState<ServiceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingService, setEditingService] = useState<ServiceItem | null>(null);
-
-    // Check if we're in demo mode
-    const isDemoMode = new URLSearchParams(location.search).get('demo') === 'true';
-
-    // Form State
     const [formData, setFormData] = useState({
-        nameLV: '', nameEN: '', nameRU: '',
-        category: '', price: '', duration: '30'
+        nameLV: '',
+        nameEN: '',
+        nameRU: '',
+        category: '',
+        price: '',
+        duration: '30'
     });
-
-    // Get clinic ID from environment variable
-    const clinicId = import.meta.env.VITE_CLINIC_ID;
 
     useEffect(() => {
         if (isDemoMode) {

@@ -21,31 +21,7 @@ import WorkingHoursPage from './components/super-admin/WorkingHoursPage';
 import BookingsPage from './components/super-admin/BookingsPage';
 import DoctorSchedulesPage from './components/super-admin/DoctorSchedulesPage';
 
-// Helper to determine Clinic ID from environment or subdomain
-const getClinicId = () => {
-    // 1. Environment variable (Build time / Dev override)
-    if (import.meta.env.VITE_CLINIC_ID) {
-        return import.meta.env.VITE_CLINIC_ID;
-    }
-
-    // 2. Subdomain (Runtime SaaS)
-    // e.g. nordic-smile.pages.dev -> nordic-smile
-    if (typeof window !== 'undefined') {
-        const hostname = window.location.hostname;
-        // Ignore localhost and IP addresses
-        if (!hostname.includes('localhost') && !hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
-            const parts = hostname.split('.');
-            if (parts.length > 2) {
-                // Strip -test, -dev, -staging suffixes to match DB ID
-                // e.g. nordic-smile-test -> nordic-smile
-                return parts[0].replace(/-test$/, '').replace(/-dev$/, '').replace(/-staging$/, '');
-            }
-        }
-    }
-
-    // 3. Fallback default
-    return 'sample';
-};
+import { getClinicId } from './utils/clinicUtils';
 
 const CLINIC_ID = getClinicId();
 console.log('[App] Initialized with Clinic ID:', CLINIC_ID);

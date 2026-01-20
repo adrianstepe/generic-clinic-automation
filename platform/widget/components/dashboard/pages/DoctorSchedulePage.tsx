@@ -34,9 +34,13 @@ const DEFAULT_SCHEDULE: DaySchedule[] = [
     { day_of_week: 0, is_available: false, start_time: '09:00', end_time: '18:00' },
 ];
 
+import { useConfig } from '@/hooks/useConfig';
+
+// ... imports ...
+
 const DoctorSchedulePage: React.FC = () => {
     const { profile } = useUser();
-    const clinicId = import.meta.env.VITE_CLINIC_ID;
+    const { clinicId } = useConfig();
     // Match sidebar logic: if not explicitly a doctor, treat as admin
     const isAdmin = profile?.role !== 'doctor';
 

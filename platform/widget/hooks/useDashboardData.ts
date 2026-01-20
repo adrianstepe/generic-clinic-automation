@@ -44,7 +44,10 @@ interface UseDashboardDataProps {
     doctorId?: string | 'all';
 }
 
+import { useConfig } from './useConfig';
+
 export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps) => {
+    const { clinicId } = useConfig();
     const [bookings, setBookings] = useState<DashboardBooking[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -118,17 +121,10 @@ export const useDashboardData = ({ dateRange, doctorId }: UseDashboardDataProps)
                         role
                     )
                 `)
-                .order('start_time', { ascending: true });
+                .order('start_time', { ascending: true })
+                .eq('clinic_id', clinicId);
 
-            // SaaS: Filter by VITE_CLINIC_ID (from environment variable)
-            // This ensures each deployment shows only its own clinic's data
-            const clinicId = import.meta.env.VITE_CLINIC_ID;
-            if (clinicId) {
-                query = query.eq('clinic_id', clinicId);
-                console.log('[Dashboard] Filtering by VITE_CLINIC_ID:', clinicId);
-            } else {
-                console.warn('[Dashboard] No VITE_CLINIC_ID set, showing all bookings');
-            }
+            // ... see next tool call for full replacement logic ...
 
             // ROLE-BASED FILTERING: Doctors see only their appointments
             if (profile?.role === 'doctor' && profile?.specialist_id) {

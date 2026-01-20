@@ -6,33 +6,32 @@ import { Plus, Edit2, Trash2, X, Upload, Loader2 } from 'lucide-react';
 import { Specialist, Language } from '@/types';
 import { SPECIALISTS as DEMO_SPECIALISTS } from '@/constants';
 
+import { useConfig } from '@/hooks/useConfig';
+
+// ... imports ...
+
 const SpecialistsPage: React.FC = () => {
     const { profile } = useUser();
+    const { clinicId } = useConfig();
     const location = useLocation();
+    const isDemoMode = clinicId === 'demo-clinic' || clinicId === 'sample';
+
     const [specialists, setSpecialists] = useState<Specialist[]>([]);
     const [loading, setLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [uploading, setUploading] = useState(false);
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Check if we're in demo mode
-    const isDemoMode = new URLSearchParams(location.search).get('demo') === 'true';
-
-    // Form State
     const [formData, setFormData] = useState({
         name: '',
         role_en: '',
         role_lv: '',
         role_ru: '',
         photo_url: '',
-        specialities: '' // Comma separated
+        specialities: ''
     });
-    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-    const [photoFile, setPhotoFile] = useState<File | null>(null);
-
-    // Get clinic ID from environment variable
-    const clinicId = import.meta.env.VITE_CLINIC_ID;
 
     useEffect(() => {
         if (isDemoMode) {
