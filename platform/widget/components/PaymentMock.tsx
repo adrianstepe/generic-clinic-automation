@@ -275,7 +275,6 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
 
     } catch (err: any) {
       console.error("Payment initiation failed:", err);
-      // Improve error message for network failures (common in dev/cors)
       if (err.message === 'Failed to fetch') {
         setErrorMsg("Network Error: Could not connect to payment server. Check your internet or try again.");
       } else {
@@ -284,6 +283,19 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
       setLoading(false);
     }
   };
+
+  // Safety fallback: If loading takes too long (e.g. redirect blocked without error), show manual link
+  useEffect(() => {
+    let timeout: any;
+    if (loading && !paymentUrl) {
+      timeout = setTimeout(() => {
+        console.warn("[PaymentMock] Loading taking too long, possibly blocked redirect.");
+        setLoading(false);
+        setErrorMsg("Payment validation took too long. Please try again or contact support.");
+      }, 15000); // 15s timeout
+    }
+    return () => clearTimeout(timeout);
+  }, [loading, paymentUrl]);
 
   // Format date for display - cleaner format: "Mon, 8 Dec • 09:00"
   const formatDisplayDate = (date: Date | null, time: string | null) => {
