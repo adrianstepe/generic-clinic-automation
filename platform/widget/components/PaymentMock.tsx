@@ -261,7 +261,12 @@ const PaymentMock: React.FC<PaymentMockProps> = ({ language, service, booking })
 
       // 5. Redirect to Stripe
       try {
-        window.location.href = data.url;
+        // Break out of iframe for Stripe Checkout
+        if (window.top) {
+          window.top.location.href = data.url;
+        } else {
+          window.location.href = data.url;
+        }
       } catch (navigationError: any) {
         console.warn("Auto-redirect blocked. Falling back to manual link.", navigationError);
         setPaymentUrl(data.url);
