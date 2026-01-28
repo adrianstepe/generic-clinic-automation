@@ -1,11 +1,19 @@
 # Dental Booking Automation - System Architecture & Business Logic
 
 ## 1. System High-Level Overview
-This is a comprehensive dental booking automation platform composed of four integrated components:
-1.  **The Brain (Supabase):** Centralized database for bookings, services, and user profiles, secured with Row Level Security (RLS).
-2.  **The Face (Cloudflare Widget):** A React-based frontend embedded on the clinic's website, handling the user booking flow and payment processing via Stripe.
-3.  **The Nervous System (n8n):** An automation engine that orchestrates complex logic like availability checking, booking confirmation, reminders, and review requests. **This is the single source of truth for all booking writes.**
-4.  **The Control Center (Admin Dashboard):** A secure interface for clinic staff to view and manage appointments directly within the database.
+This is a comprehensive **Digital Modernization Platform** for dental clinics, operating on a "Trojan Horse" sales model.
+
+### The Product: "Modernization Suite"
+We do not just sell a booking widget. We sell a complete digital overhaul:
+1.  **The Hook (The Website):** A premium, mobile-first landing page (`marketing/clinic-landing`) that replaces the clinic's outdated site. This is the "Trojan Horse" that gets us in the door.
+2.  **The Payload (The Widget):** Embedded 24/7 online booking, deposit collection (Stripe), and automation workflows (n8n).
+3.  **The Brain (Supabase):** Centralized multi-tenant database for bookings, services, and user profiles, secured with Row Level Security (RLS).
+4.  **The Control Center (Admin Dashboard):** A secure interface for clinic staff to view and manage appointments.
+
+### Architecture Components
+1.  **Landing Page (Cloudflare Pages):** fast, SEO-optimized React sites for each clinic (e.g., `nordic-smile.pages.dev`).
+2.  **Widget (Cloudflare Pages):** The booking engine (`butkevica-dental-booking`), embedded via iframe into the Landing Page.
+3.  **Automation Engine (n8n):** Orchestrates logic: availability checking, confirmations, reminders, reviews. **Single source of truth for writes.**
 
 ## 2. Database Mechanics (Supabase)
 
@@ -33,7 +41,7 @@ Central record of all appointments with full payment tracking.
 | `payment_intent_id` | varchar | ❌ | For refunds |
 | `booking_token` | uuid | ❌ | Auto-generated |
 | `client_reference` | varchar | ❌ | Human-readable ref (BK-XXXXX) |
-| `business_id` | varchar | ❌ | Multi-tenant support |
+| `business_id` | varchar | ❌ | Multi-tenant support (Active) |
 | `language` | varchar | ❌ | en/lv/ru - user's language preference |
 | `cancellation_token` | varchar | ❌ | Secure token for self-service cancellation |
 | `cancelled_at` | timestamptz | ❌ | When booking was cancelled |
@@ -73,7 +81,7 @@ Central record of all appointments with full payment tracking.
 Audit trail for n8n automation events.
 
 #### `businesses`
-Multi-tenant support (currently single tenant).
+Multi-tenant support (Active). Each clinic has a distinct record here.
 
 #### `clinic_services` (Dynamic Configuration)
 Replaces hardcoded SERVICES array in `constants.ts`. Allows service changes without redeployment.
@@ -1094,8 +1102,26 @@ Webhook → Filter Event → Extract Data → Fetch Specialists → Auto-Assign
 | Insurance processing | Varies by country, complex integrations |
 | Video consultations | Different product category |
 
-**Sales Response:**
 > *"Our system is focused on lead capture and booking automation. Clinical workflows remain in your existing practice management system. We integrate with PMS for appointment sync where APIs are available."*
+
+### 6.29 Trojan Horse Deployment Strategy (Added 2026-01-20)
+
+**The Strategy:**
+Instead of integrating into legacy sites, we deploy a fresh, high-performance landing page for the client.
+
+**Technical Implementation:**
+- **Repo:** `marketing/clinic-landing` (React/Vite).
+- **Deployment:** Cloudflare Pages (Multi-route or separate projects).
+- **Configuration:**
+    - `VITE_CLINIC_ID`: Set in build environment or URL query param.
+    - `BookingWidget.tsx`: Embeds the widget iframe with the correct `?clinicId=...` parameter.
+
+**The "Trojan Horse" Flow:**
+1.  **Scout:** Identify clinic with bad mobile site.
+2.  **Build:** Generate landing page with their branding.
+3.  **Deploy:** Push to `[clinic-name].pages.dev`.
+4.  **Pitch:** Send them the link. "I already improved your site."
+5.  **Close:** They keep the site (free) if they subscribe to the Booking System (€79/mo).
 
 ---
 
@@ -1111,5 +1137,6 @@ Webhook → Filter Event → Extract Data → Fetch Specialists → Auto-Assign
 | 2025-12-22 | 6.15-6.16 | Multi-tenant branding, super admin |
 | 2025-12-23 | 6.17 | RLS performance fixes |
 | 2025-12-24 | 6.18 | Multi-specialist capacity |
-| 2026-01-14 | 6.19-6.28 | Gap analysis documentation (SMS, phone bug, 2FA, payment options, Google OAuth, analytics, code cleanup, scope boundaries) |
+| 2026-01-14 | 6.19-6.28 | Gap analysis documentation |
+| 2026-01-20 | 1, 2, 6.29 | Trojan Horse Strategy & Multi-tenant Status Update |
 

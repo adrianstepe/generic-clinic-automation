@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Lato:wght@300;400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -11,41 +11,44 @@
 
 @layer base {
   :root {
-    /* Soft cream background */
-    --background: 40 33% 98%;
-    --foreground: 200 25% 15%;
+    /* Soft cream background (Creamy Beige #F9F7F5) */
+    --background: 30 17% 97%;
+    --foreground: 48 42% 16%;
+    /* Deep Olive for text */
 
-    /* Card - pure white for contrast */
+    /* Card - white with slight warmth */
     --card: 0 0% 100%;
-    --card-foreground: 200 25% 15%;
+    --card-foreground: 48 42% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 200 25% 15%;
+    --popover-foreground: 48 42% 16%;
 
-    /* Primary - Deep teal */
-    --primary: 175 45% 30%;
+    /* Primary - Warm Sand #A18267 */
+    --primary: 28 29% 52%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Soft warm gray */
-    --secondary: 40 20% 94%;
-    --secondary-foreground: 200 25% 15%;
+    /* Secondary - Deep Olive #3B3418 */
+    --secondary: 48 42% 16%;
+    --secondary-foreground: 30 17% 97%;
 
     /* Muted - Warm gray tones */
     --muted: 40 15% 92%;
-    --muted-foreground: 200 10% 45%;
+    --muted-foreground: 28 29% 52%;
 
-    /* Accent - Warm gold */
+    /* Accent - Warm gold (retained) */
     --accent: 38 80% 55%;
-    --accent-foreground: 200 25% 15%;
+    --accent-foreground: 48 42% 16%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 40 15% 88%;
-    --input: 40 15% 88%;
-    --ring: 175 45% 30%;
+    --border: 28 29% 80%;
+    /* Softer sand border */
+    --input: 28 29% 80%;
+    --ring: 28 29% 52%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
+    /* Rounded-2xl/3xl feel */
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -64,9 +67,9 @@
     --card-foreground: 40 33% 98%;
     --popover: 200 25% 12%;
     --popover-foreground: 40 33% 98%;
-    --primary: 175 45% 45%;
+    --primary: 28 29% 52%;
     --primary-foreground: 200 25% 10%;
-    --secondary: 200 20% 18%;
+    --secondary: 48 42% 16%;
     --secondary-foreground: 40 33% 98%;
     --muted: 200 20% 20%;
     --muted-foreground: 40 10% 60%;
@@ -76,7 +79,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 200 20% 20%;
     --input: 200 20% 20%;
-    --ring: 175 45% 45%;
+    --ring: 28 29% 52%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -97,7 +100,12 @@
     @apply bg-background text-foreground font-body antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-display;
   }
 }
@@ -113,7 +121,7 @@
 
   .shadow-elegant {
     box-shadow: 0 20px 50px -12px hsl(var(--primary) / 0.15),
-                0 8px 20px -8px hsl(var(--foreground) / 0.08);
+      0 8px 20px -8px hsl(var(--foreground) / 0.08);
   }
 
   /* Gradient radial utility */

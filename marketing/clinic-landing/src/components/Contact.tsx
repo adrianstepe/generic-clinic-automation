@@ -35,11 +35,11 @@ const Contact = () => {
   const [rightRef, rightControls] = useScrollAnimation(0.2);
 
   return (
-    <section id="kontakti" className="py-32 bg-secondary/30 relative overflow-hidden">
+    <section id="kontakti" className="py-32 bg-primary/5 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-gradient-radial from-primary/5 to-transparent rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-radial from-accent/5 to-transparent rounded-full blur-3xl" />
-      
+
       <div className="container mx-auto px-6 relative z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-start">
           {/* Contact Info */}
@@ -49,27 +49,27 @@ const Contact = () => {
             initial="hidden"
             animate={leftControls}
           >
-            <motion.span 
+            <motion.span
               variants={fadeInUp}
               className="inline-block text-primary font-medium mb-4 text-sm uppercase tracking-wider"
             >
               Kontakti
             </motion.span>
-            <motion.h2 
+            <motion.h2
               variants={fadeInLeft}
               className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6"
             >
               Apmeklējiet
               <span className="block text-primary">Mūs</span>
             </motion.h2>
-            <motion.p 
+            <motion.p
               variants={fadeInLeft}
               className="text-muted-foreground text-lg mb-12 leading-relaxed max-w-lg"
             >
               Atrodamies Rīgas centrā ar ērtu piekļuvi no visas pilsētas. Bezmaksas autostāvvieta pacientiem.
             </motion.p>
-            
-            <motion.div 
+
+            <motion.div
               className="space-y-6"
               variants={staggerContainer}
             >
@@ -78,9 +78,8 @@ const Contact = () => {
                   key={index}
                   variants={staggerItem}
                   href={item.link || "#"}
-                  className={`flex items-start gap-4 p-4 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 transition-all duration-300 ${
-                    item.link ? "hover:bg-card hover:border-primary/20 hover:shadow-soft cursor-pointer group" : ""
-                  }`}
+                  className={`flex items-start gap-4 p-4 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 transition-all duration-300 ${item.link ? "hover:bg-card hover:border-primary/20 hover:shadow-soft cursor-pointer group" : ""
+                    }`}
                 >
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors duration-300">
                     <item.icon className="w-5 h-5 text-primary" />
@@ -98,9 +97,9 @@ const Contact = () => {
               ))}
             </motion.div>
           </motion.div>
-          
+
           {/* Contact Form */}
-          <motion.div 
+          <motion.div
             ref={rightRef}
             variants={fadeInRight}
             initial="hidden"
@@ -114,53 +113,53 @@ const Contact = () => {
               <p className="text-muted-foreground mb-8">
                 Atstājiet savu kontaktinformāciju un mēs sazināsimies ar jums darba dienas laikā.
               </p>
-              
+
               <form className="space-y-5">
                 <div className="grid md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Vārds
                     </label>
-                    <input 
+                    <input
                       type="text"
                       placeholder="Jūsu vārds"
-                      className="w-full px-4 py-4 rounded-xl bg-secondary border border-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all"
+                      className="w-full px-4 py-4 rounded-xl bg-white border border-border/50 text-foreground placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all shadow-sm"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Tālrunis
                     </label>
-                    <input 
+                    <input
                       type="tel"
                       placeholder="+371 20 000 000"
-                      className="w-full px-4 py-4 rounded-xl bg-secondary border border-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all"
+                      className="w-full px-4 py-4 rounded-xl bg-white border border-border/50 text-foreground placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all shadow-sm"
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     E-pasts
                   </label>
-                  <input 
+                  <input
                     type="email"
                     placeholder="jusu@epasts.lv"
-                    className="w-full px-4 py-4 rounded-xl bg-secondary border border-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all"
+                    className="w-full px-4 py-4 rounded-xl bg-white border border-border/50 text-foreground placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all shadow-sm"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Ziņojums
                   </label>
-                  <textarea 
+                  <textarea
                     rows={4}
                     placeholder="Jūsu jautājums vai vēlamais pakalpojums..."
-                    className="w-full px-4 py-4 rounded-xl bg-secondary border border-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all resize-none"
+                    className="w-full px-4 py-4 rounded-xl bg-white border border-border/50 text-foreground placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:outline-none transition-all resize-none shadow-sm"
                   />
                 </div>
-                
+
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

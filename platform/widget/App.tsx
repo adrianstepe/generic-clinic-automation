@@ -26,13 +26,38 @@ import { getClinicId } from './utils/clinicUtils';
 const CLINIC_ID = getClinicId();
 console.log('[App] Initialized with Clinic ID:', CLINIC_ID);
 
+/**
+ * Detect widget display mode from multiple sources:
+ * 1. URL parameter: ?mode=inline
+ * 2. DOM attribute on root: <div id="root" data-mode="inline">
+ * 3. Global window property: window.embeddedMode
+ */
+function detectDisplayMode(): 'popup' | 'inline' {
+    if (typeof window === 'undefined') return 'popup';
+
+    // Check URL parameter first (highest priority)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'inline') return 'inline';
+
+    // Check DOM attribute on root element
+    const rootElement = document.getElementById('root');
+    if (rootElement?.getAttribute('data-mode') === 'inline') return 'inline';
+
+    // Check global window property (for programmatic embedding)
+    if ((window as any).embeddedMode === 'inline') return 'inline';
+
+    return 'popup';
+}
+
 function App() {
+    const displayMode = detectDisplayMode();
+
     return (
         <ConfigProvider clinicId={CLINIC_ID}>
             <UserProvider>
                 <Router>
                     <Routes>
-                        <Route path="/" element={<BookingWidget />} />
+                        <Route path="/" element={<BookingWidget mode={displayMode} />} />
                         <Route path="/login" element={<LoginPage />} />
 
                         {/* Clinic Staff Dashboard */}

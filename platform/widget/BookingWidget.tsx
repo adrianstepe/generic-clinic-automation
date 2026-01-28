@@ -12,17 +12,21 @@ import { useAnalytics } from './hooks/useAnalytics';
 import { checkAvailability } from './services/api';
 import { supabase } from './supabaseClient';
 
-const BookingWidget: React.FC = () => {
+interface BookingWidgetProps {
+    /**
+     * Display mode for the widget:
+     * - 'popup': Default floating/modal style with shadows and rounded corners
+     * - 'inline': Flat, full-width embed mode for seamless integration into landing pages
+     */
+    mode?: 'popup' | 'inline';
+}
+
+const BookingWidget: React.FC<BookingWidgetProps> = ({ mode = 'popup' }) => {
+    const isInline = mode === 'inline';
+
     // Get full config context to access clinicId
     const { texts, clinicId } = useConfig();
     const { trackStep, trackLanguageChange, trackBookingComplete } = useAnalytics();
-
-    // Standalone mode detection (full-screen vs overlay widget)
-    const [isStandalone] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        const params = new URLSearchParams(window.location.search);
-        return params.get('mode') === 'standalone';
-    });
 
     const STORAGE_KEY = `${clinicId}_booking_state`;
 
@@ -32,16 +36,12 @@ const BookingWidget: React.FC = () => {
             const params = new URLSearchParams(window.location.search);
             if (params.get('reset') === 'true') {
                 sessionStorage.removeItem(STORAGE_KEY);
-                // clear the query param without reload if possible, or just ignore it implies we start fresh
-                // We will return default state below.
             } else {
                 // Only try to load if NOT resetting
-                // Use sessionStorage so state clears when tab is closed but persists during Stripe redirect
                 const saved = sessionStorage.getItem(STORAGE_KEY);
                 if (saved) {
                     try {
                         const parsed = JSON.parse(saved);
-                        // Restore Date object
                         if (parsed.selectedDate) {
                             parsed.selectedDate = new Date(parsed.selectedDate);
                         }
@@ -84,18 +84,17 @@ const BookingWidget: React.FC = () => {
         trackStep(booking.step, contextData);
     }, [booking.step, trackStep]);
 
-    // Handle browser back button within the widget context (optional enhancement)
+    // Handle browser back button within the widget context
     useEffect(() => {
-        // Scroll to top on step change
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [booking.step]);
+        // Scroll to top on step change (only in popup mode to avoid jarring UX in inline)
+        if (!isInline) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [booking.step, isInline]);
 
-    // Persist state to sessionStorage to handle redirect flows (like Stripe)
-    // sessionStorage clears when tab is closed, but persists during redirects
-    // Don't persist step 5 (confirmation) - booking is complete, allow fresh start
+    // Persist state to sessionStorage
     useEffect(() => {
         if (booking.step === 5) {
-            // Booking complete - clear storage so user can book again
             sessionStorage.removeItem(STORAGE_KEY);
         } else {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(booking));
@@ -106,11 +105,8 @@ const BookingWidget: React.FC = () => {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('success') === '1') {
-            // State is already loaded via lazy init, just advance step
             setBooking(prev => ({ ...prev, step: 5 }));
             trackBookingComplete();
-
-            // Clear the success parameter from URL to prevent showing confirmation on refresh/reopen
             const newUrl = window.location.pathname;
             window.history.replaceState({}, '', newUrl);
         }
@@ -119,7 +115,7 @@ const BookingWidget: React.FC = () => {
     // Pre-fetch availability to warm up the n8n workflow
     useEffect(() => {
         const warmUp = async () => {
-            if (!clinicId) return; // Wait for clinicId
+            if (!clinicId) return;
             try {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
@@ -127,7 +123,6 @@ const BookingWidget: React.FC = () => {
                 console.log("Warming up availability workflow for:", dateStr);
                 await checkAvailability(dateStr, clinicId);
             } catch (e) {
-                // Ignore errors during warm-up
                 console.log("Warm-up failed (expected if offline):", e);
             }
         };
@@ -135,7 +130,6 @@ const BookingWidget: React.FC = () => {
     }, [clinicId]);
 
     const updateBooking = (updates: Partial<BookingState>) => {
-        // Track language changes
         if (updates.language && updates.language !== booking.language) {
             trackLanguageChange(updates.language);
         }
@@ -164,12 +158,10 @@ const BookingWidget: React.FC = () => {
             console.log('[Lead Capture] Saved lead to Supabase');
         } catch (error) {
             console.error('[Lead Capture] Failed (fail-open):', error);
-            // Fail-open: don't block user from proceeding
         }
     };
 
     const nextStep = () => {
-        // Capture lead before payment step (fire-and-forget)
         if (booking.step === 3) {
             saveLeadToSupabase();
         }
@@ -190,8 +182,6 @@ const BookingWidget: React.FC = () => {
             case 2: return !!booking.selectedDate && !!booking.selectedTime;
             case 3:
                 const { firstName, lastName, email, phone, gdprConsent } = booking.patientData;
-                // Phone must be longer than just the country code (e.g. "+371" is 4 chars)
-                // Email must look somewhat valid
                 return (
                     firstName.trim().length > 0 &&
                     lastName.trim().length > 0 &&
@@ -199,17 +189,14 @@ const BookingWidget: React.FC = () => {
                     phone.length > 5 &&
                     gdprConsent
                 );
-            case 4: return true; // Payment handled in component
+            case 4: return true;
             default: return false;
         }
     };
 
     // Theme: Always default to light mode for clean medical aesthetic
-    // User can toggle manually, persisted to localStorage
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-        // Force light mode for demo to ensure professional look
         if (clinicId === 'demo-clinic') return 'light';
-
         if (typeof window !== 'undefined' && localStorage.theme === 'dark') {
             return 'dark';
         }
@@ -227,8 +214,23 @@ const BookingWidget: React.FC = () => {
         }
     };
 
+    // ========================================================================
+    // INLINE MODE: Flat, full-width, seamless embed for landing pages
+    // POPUP MODE: Standalone page with shadows, rounded corners, padding
+    // ========================================================================
+
+    // Container classes
+    const containerClasses = isInline
+        ? 'w-full h-full min-h-[600px] bg-white dark:bg-slate-900'
+        : 'min-h-[100dvh] bg-surface dark:bg-slate-900 pb-20 transition-colors duration-300';
+
+    // Main content area classes
+    const mainClasses = isInline
+        ? 'w-full h-full bg-white dark:bg-slate-800 overflow-hidden'
+        : 'max-w-3xl mx-auto min-h-[calc(100dvh-64px)] bg-white/80 backdrop-blur-md dark:bg-slate-800 overflow-hidden shadow-2xl sm:my-8 sm:rounded-3xl sm:min-h-fit border border-white/50 transition-colors duration-300';
+
     return (
-        <div className={`min-h-[100dvh] transition-colors duration-300 ${isStandalone ? 'bg-white dark:bg-slate-900' : 'bg-gray-50 dark:bg-slate-900 pb-20'}`}>
+        <div className={containerClasses}>
             <Header
                 currentLanguage={booking.language}
                 setLanguage={(lang) => updateBooking({ language: lang })}
@@ -236,19 +238,18 @@ const BookingWidget: React.FC = () => {
                 toggleTheme={toggleTheme}
             />
 
-            <main className={`bg-white dark:bg-slate-800 overflow-hidden transition-colors duration-300 ${isStandalone ? 'w-full min-h-[calc(100dvh-64px)]' : 'max-w-3xl mx-auto min-h-[calc(100dvh-64px)] shadow-xl sm:my-8 sm:rounded-2xl sm:min-h-fit'}`}>
+            <main className={mainClasses}>
                 {booking.step < 5 && (
                     <ProgressBar currentStep={booking.step} language={booking.language} />
                 )}
 
-                <div className="p-6 sm:p-8">
+                <div className={isInline ? 'p-4 sm:p-6' : 'p-6 sm:p-10'}>
                     {booking.step === 1 && (
                         <ServiceSelection
                             language={booking.language}
                             selectedService={booking.selectedService}
                             onSelect={(service) => {
                                 updateBooking({ selectedService: service });
-                                // Auto advance on mobile for better UX
                                 setTimeout(() => nextStep(), 200);
                             }}
                         />
@@ -289,15 +290,15 @@ const BookingWidget: React.FC = () => {
                     )}
                 </div>
 
-                {/* Footer Navigation (Sticky on Mobile) */}
+                {/* Footer Navigation */}
                 {booking.step < 5 && booking.step !== 4 && (
-                    <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t dark:border-slate-700 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center sm:relative sm:border-0 sm:bg-transparent dark:sm:bg-transparent transition-colors duration-300">
+                    <div className={`sticky bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg dark:bg-slate-800 border-t dark:border-slate-700 p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-between items-center transition-colors duration-300 ${isInline ? '' : 'sm:relative sm:border-0 sm:bg-transparent dark:sm:bg-transparent'}`}>
                         <button
                             onClick={prevStep}
                             disabled={booking.step === 1}
-                            className={`px-6 py-3 rounded-xl font-medium transition-colors ${booking.step === 1
+                            className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium transition-colors font-sans ${booking.step === 1
                                 ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-600 hover:bg-gray-100'
+                                : 'text-gray-500 hover:text-secondary hover:bg-surface'
                                 }`}
                         >
                             {texts.back[booking.language]}
@@ -306,9 +307,9 @@ const BookingWidget: React.FC = () => {
                         <button
                             onClick={nextStep}
                             disabled={!isStepValid()}
-                            className={`px-8 py-3 rounded-xl font-bold text-white shadow-md transition-all transform active:scale-95 ${isStepValid()
-                                ? 'bg-primary hover:bg-teal-700'
-                                : 'bg-gray-300 cursor-not-allowed shadow-none'
+                            className={`px-6 sm:px-10 py-2.5 sm:py-3.5 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-95 font-sans tracking-wide ${isStepValid()
+                                ? 'bg-primary hover:bg-[#8e7159] hover:shadow-xl'
+                                : 'bg-gray-200 cursor-not-allowed shadow-none text-gray-400'
                                 }`}
                         >
                             {texts.next[booking.language]}
@@ -317,10 +318,12 @@ const BookingWidget: React.FC = () => {
                 )}
             </main>
 
-            {/* Hidden Link for You to Click */}
-            <div className="fixed bottom-2 right-2 opacity-30 hover:opacity-100 z-50 transition-opacity">
-                <a href="/login" className="text-xs text-gray-500 dark:text-slate-600 bg-gray-200 dark:bg-slate-800 px-2 py-1 rounded shadow-sm dark:shadow-none border dark:border-slate-700">Login</a>
-            </div>
+            {/* Hidden Login Link - Only show in popup mode */}
+            {!isInline && (
+                <div className="fixed bottom-2 right-2 opacity-30 hover:opacity-100 z-50 transition-opacity">
+                    <a href="/login" className="text-xs text-gray-500 dark:text-slate-600 bg-gray-200 dark:bg-slate-800 px-2 py-1 rounded shadow-sm dark:shadow-none border dark:border-slate-700">Login</a>
+                </div>
+            )}
         </div>
     );
 };

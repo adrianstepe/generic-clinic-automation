@@ -5,17 +5,19 @@ interface BookingWidgetProps {
 }
 
 const BookingWidget = ({ clinicId = "butkevica" }: BookingWidgetProps) => {
-  // Build widget URL with clinicId parameter
-  const widgetUrl = `https://generic-clinic-automation.pages.dev/?clinicId=${clinicId}`;
+  // Build widget URL with clinicId parameter and inline mode for seamless embedding
+  const widgetUrl = import.meta.env.DEV
+    ? `http://localhost:3002/?clinicId=${clinicId}&mode=inline`
+    : `https://generic-clinic-automation.pages.dev/?clinicId=${clinicId}&mode=inline`;
 
   return (
     <div
       id="booking-widget-container"
-      className="bg-card rounded-3xl w-full max-w-md shadow-elegant relative overflow-hidden"
+      className="w-full max-w-md relative overflow-hidden"
       style={{ height: '620px' }}
     >
       {/* Loading state text (hidden when iframe loads) */}
-      <div className="absolute inset-0 flex items-center justify-center bg-card z-0">
+      <div className="absolute inset-0 flex items-center justify-center bg-card z-0 rounded-2xl">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground text-sm">Ielādē pieraksta sistēmu...</p>
@@ -29,7 +31,7 @@ const BookingWidget = ({ clinicId = "butkevica" }: BookingWidgetProps) => {
         height="100%"
         frameBorder="0"
         title="Online Pieraksts"
-        className="relative z-10 rounded-3xl"
+        className="relative z-10"
         loading="lazy"
         allow="payment"
       />

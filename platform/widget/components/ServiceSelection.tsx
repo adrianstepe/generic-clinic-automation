@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, MouseEvent } from 'react';
 import { Service, Language, ServiceCategory } from '../types';
 import { useConfig } from '../hooks/useConfig';
 
@@ -19,8 +19,6 @@ const CATEGORY_LABELS: Record<ServiceCategory, string> = {
   surgery: 'categorySurgery',
   prosthetics: 'categoryProsthetics',
 };
-
-
 
 const ServiceSelection: React.FC<ServiceSelectionProps> = ({ language, selectedService, onSelect }) => {
   const { services, texts, isLoading, clinic } = useConfig();
@@ -49,7 +47,7 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ language, selectedS
     return (
       <div className="animate-fade-in w-full flex flex-col items-center justify-center py-12">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-primary"></div>
-        <p className="text-gray-500 dark:text-gray-400 mt-4 text-sm">Loading services...</p>
+        <p className="text-gray-500 mt-4 text-sm font-serif italic">Loading services...</p>
       </div>
     );
   }
@@ -57,13 +55,13 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ language, selectedS
   return (
     <div className="animate-fade-in w-full">
       {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-secondary dark:text-white mb-2">{texts.selectService[language]}</h2>
-        <p className="text-gray-600 dark:text-gray-400">{texts.selectServiceDesc[language]}</p>
+      <div className="mb-10 text-center">
+        <h2 className="text-3xl font-serif font-bold text-secondary mb-3">{texts.selectService[language]}</h2>
+        <p className="text-gray-500 font-light tracking-wide">{texts.selectServiceDesc[language]}</p>
       </div>
 
       {/* Grouped Services */}
-      <div className="space-y-8">
+      <div className="space-y-10">
         {CATEGORY_ORDER.map((category) => {
           const categoryServices = groupedServices[category];
           if (categoryServices.length === 0) return null;
@@ -73,128 +71,129 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ language, selectedS
 
           return (
             <div key={category}>
-              {/* Category Header - Premium uppercase styling */}
-              <h3 className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.2em] mb-4 px-1 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary/60"></span>
-                {categoryLabel}
-              </h3>
+              {/* Category Header - Minimalist Elegant */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-primary/20"></div>
+                <h3 className="text-xs font-bold text-secondary uppercase tracking-[0.25em] font-sans">
+                  {categoryLabel}
+                </h3>
+                <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-primary/20"></div>
+              </div>
 
-              {/* Service Cards - Premium horizontal layout */}
-              <div className="space-y-3">
-                {categoryServices.map((service) => {
-                  const isSelected = selectedService?.id === service.id;
-
-                  return (
-                    <button
-                      key={service.id}
-                      onClick={() => onSelect(service)}
-                      className={`
-                        group w-full p-4 rounded-xl border-2 transition-all duration-200 text-left
-                        outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                        ${isSelected
-                          ? 'border-primary bg-teal-50 dark:bg-teal-900/20 shadow-md'
-                          : 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5'
-                        }
-                      `}
-                      aria-pressed={isSelected}
-                    >
-                      <div className="flex items-center gap-4">
-                        {/* Icon - Larger with subtle background */}
-                        {service.icon && (
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-colors ${isSelected
-                            ? 'bg-primary/10 dark:bg-teal-800/30'
-                            : 'bg-gray-50 dark:bg-slate-700/50 group-hover:bg-primary/5'
-                            }`}>
-                            {service.icon}
-                          </div>
-                        )}
-
-                        {/* Content - Main info */}
-                        <div className="flex-1 min-w-0">
-                          {/* Title */}
-                          <h4 className={`font-semibold text-base mb-0.5 ${isSelected ? 'text-primary dark:text-teal-400' : 'text-gray-900 dark:text-white'}`}>
-                            {service.name[language]}
-                          </h4>
-
-                          {/* Description - Truncated on small screens */}
-                          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
-                            {service.description[language]}
-                          </p>
-                        </div>
-
-                        {/* Right side - Duration, Price, Arrow */}
-                        <div className="flex items-center gap-4 shrink-0">
-                          {/* Duration */}
-                          <span className="text-sm text-gray-400 dark:text-gray-500 hidden sm:block">
-                            {service.durationMinutes} min
-                          </span>
-
-                          {/* Price - Prominent */}
-                          <div className="flex items-center gap-1">
-                            <span className={`text-lg font-bold ${isSelected ? 'text-primary dark:text-teal-400' : 'text-gray-800 dark:text-white'}`}>
-                              {clinic.settings?.currency === 'USD' ? '$' : '€'}{service.price}
-                            </span>
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {texts.startingFrom[language]}
-                            </span>
-                            {/* Info tooltip trigger - using span instead of button to avoid nesting violation */}
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowPriceTooltip(showPriceTooltip === service.id ? null : service.id);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  setShowPriceTooltip(showPriceTooltip === service.id ? null : service.id);
-                                }
-                              }}
-                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5 ml-0.5 cursor-pointer"
-                              aria-label="Price information"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </span>
-                          </div>
-
-                          {/* Arrow - CTA indicator */}
-                          <svg
-                            className={`w-5 h-5 shrink-0 transition-all ${isSelected ? 'text-primary dark:text-teal-400' : 'text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-1'}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Mobile: Duration shown below */}
-                      <div className="flex items-center gap-2 mt-2 sm:hidden">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          {service.durationMinutes} min
-                        </span>
-                      </div>
-
-                      {/* Tooltip */}
-                      {showPriceTooltip === service.id && (
-                        <div className="mt-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg text-xs text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-slate-600">
-                          {texts.priceTooltip?.[language] || 'Final price depends on treatment complexity and materials used.'}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+              {/* Service Cards - Luxury Layout */}
+              <div className="space-y-4">
+                {categoryServices.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    isSelected={selectedService?.id === service.id}
+                    onSelect={onSelect}
+                    language={language}
+                    clinicCurrency={clinic.settings?.currency || 'EUR'}
+                    texts={texts}
+                  />
+                ))}
               </div>
             </div>
           );
         })}
       </div>
     </div>
+  );
+};
+
+// Extracted Card Component for clean logic
+const ServiceCard = ({ service, isSelected, onSelect, language, clinicCurrency, texts }: any) => {
+  const cardRef = useRef<HTMLButtonElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: MouseEvent<HTMLButtonElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  return (
+    <button
+      ref={cardRef}
+      onClick={() => onSelect(service)}
+      onMouseMove={handleMouseMove}
+      className={`
+        relative group w-full p-6 rounded-2xl transition-all duration-500 text-left overflow-hidden
+        outline-none border
+        ${isSelected
+          ? 'border-primary bg-surface shadow-2xl scale-[1.02]'
+          : 'border-transparent bg-white/40 backdrop-blur-md hover:bg-white/60 hover:scale-[1.01] hover:shadow-xl hover:border-primary/20'
+        }
+      `}
+    >
+      {/* Spotlight Effect Overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{
+          background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(161, 130, 103, 0.08), transparent 40%)`
+        }}
+      />
+
+      <div className="relative z-10 flex items-center justify-between gap-6">
+        <div className="flex items-center gap-6 flex-1">
+          {/* Icon - Minimalist Box */}
+          {service.icon && (
+            <div className={`
+              w-14 h-14 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-all duration-300
+              ${isSelected
+                ? 'bg-primary text-white shadow-lg rotate-3'
+                : 'bg-surface text-primary group-hover:bg-primary/10'
+              }
+            `}>
+              {service.icon}
+            </div>
+          )}
+
+          {/* Texts */}
+          <div className="flex-1">
+            <h4 className={`text-lg font-serif font-bold mb-1 transition-colors ${isSelected ? 'text-secondary' : 'text-gray-800'}`}>
+              {service.name[language]}
+            </h4>
+            <div className="flex items-center gap-4 text-sm font-sans text-gray-500">
+              <span>{service.durationMinutes} min</span>
+              <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+              <span className="line-clamp-1">{service.description[language]}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Price & Magnetic Indicator */}
+        <div className="flex items-center gap-6">
+          <div className={`text-right transition-transform duration-300 ${isSelected ? 'translate-x-0' : 'group-hover:-translate-x-2'}`}>
+            <span className="block text-xl font-bold font-serif text-secondary">
+              {clinicCurrency === 'USD' ? '$' : '€'}{service.price}
+            </span>
+            <span className="text-[10px] uppercase tracking-wider text-gray-400">
+              {texts.startingFrom[language]}
+            </span>
+          </div>
+
+          {/* Magnetic "Follow" Indicator - Replaces Chevron */}
+          <div className={`
+            w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300
+            ${isSelected ? 'bg-primary text-white shadow-lg' : 'bg-transparent border border-gray-200 text-gray-300 group-hover:border-primary group-hover:text-primary'}
+          `}>
+            <svg
+              width="20" height="20" viewBox="0 0 24 24" fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className={`transition-transform duration-300 ${isSelected ? 'rotate-0' : '-rotate-45 group-hover:rotate-0'}`}
+            >
+              <path d="M5 12H19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 5L19 12L12 19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </button>
   );
 };
 

@@ -7,6 +7,8 @@ import ClinicPage from "./pages/ClinicPage";
 import NotFound from "./pages/NotFound";
 import { clinics, getClinicBySlug, defaultClinic } from "./config/clinics";
 
+import SupportBubble from "./components/SupportBubble";
+
 const queryClient = new QueryClient();
 
 // Dynamic clinic route component
@@ -27,6 +29,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <SupportBubble />
       <BrowserRouter>
         <Routes>
           {/* Root redirects to first clinic */}

@@ -118,18 +118,6 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
     fetchWeekAvailability();
   }, [dates, clinicId]);
 
-  // Get the month name for current week view
-  const getMonthDisplay = () => {
-    if (dates.length === 0) return '';
-    const firstDate = dates[0];
-    const lastDate = dates[dates.length - 1];
-    const locale = language === Language.EN ? 'en-US' : language === Language.LV ? 'lv-LV' : 'ru-RU';
-    const firstMonth = firstDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-    const lastMonth = lastDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-    if (firstMonth === lastMonth) return firstMonth;
-    return `${firstDate.toLocaleDateString(locale, { month: 'short' })} - ${lastDate.toLocaleDateString(locale, { month: 'short', year: 'numeric' })}`;
-  };
-
   // Handle "Next Available" shortcut
   const handleNextAvailable = async () => {
     if (!clinicId) return;
@@ -170,7 +158,6 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
 
       try {
         // Format YYYY-MM-DD (Local Time) to ensure n8n gets the correct day
-        // We use 'en-CA' because it outputs YYYY-MM-DD consistently
         const dateStr = selectedDate.toLocaleDateString('en-CA');
 
         // Call the service
@@ -208,39 +195,52 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-10 animate-fade-in">
       {/* Specialist Selection */}
       <div>
-        <h2 className="text-xl font-bold text-secondary dark:text-white mb-4">{texts.selectSpecialist[language]}</h2>
-        <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+        <h2 className="text-xl font-serif font-bold text-secondary mb-6">{texts.selectSpecialist[language]}</h2>
+        <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
           {/* Option for "Any Specialist" */}
           <button
             onClick={() => onSelectSpecialist(null)}
-            className={`min-w-[140px] p-4 rounded-xl border-2 flex flex-col items-center justify-center transition-all snap-start ${selectedSpecialist === null
-              ? 'border-primary bg-teal-50 dark:bg-teal-900/20'
-              : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+            className={`min-w-[150px] p-5 rounded-2xl border transition-all duration-300 snap-start flex flex-col items-center justify-center
+             ${selectedSpecialist === null
+                ? 'border-primary bg-surface shadow-md scale-105'
+                : 'border-transparent bg-white/50 backdrop-blur-sm grayscale opacity-70 hover:grayscale-0 hover:opacity-100 hover:scale-105'
               } `}
           >
-            <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-2xl mb-2">
-              🏥
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-3 transition-colors ${selectedSpecialist === null ? 'bg-white text-primary' : 'bg-gray-100 text-gray-400'}`}>
+              {/* Vector Clinic Icon */}
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 22H22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 2V22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M4 22V8L12 2L20 8V22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M9.5 14H14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 11.5V16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
-            <span className="text-sm font-medium text-center text-gray-900 dark:text-gray-100">{texts.anySpecialist[language]}</span>
+            <span className="text-sm font-bold text-secondary text-center font-sans tracking-wide">{texts.anySpecialist[language]}</span>
           </button>
 
           {availableSpecialists.map((spec) => (
             <button
               key={spec.id}
               onClick={() => onSelectSpecialist(spec)}
-              className={`min-w-[140px] p-4 rounded-xl border-2 flex flex-col items-center transition-all snap-start ${selectedSpecialist?.id === spec.id
-                ? 'border-primary bg-teal-50 dark:bg-teal-900/20'
-                : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+              className={`min-w-[150px] p-5 rounded-2xl border transition-all duration-300 snap-start flex flex-col items-center
+               ${selectedSpecialist?.id === spec.id
+                  ? 'border-primary bg-surface shadow-md scale-105'
+                  : 'border-transparent bg-white/50 backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105'
                 } `}
             >
-              {spec.photoUrl && (
-                <img src={spec.photoUrl} alt={spec.name} className="w-16 h-16 rounded-full object-cover mb-2 border border-gray-100 dark:border-slate-600" />
+              {spec.photoUrl ? (
+                <img src={spec.photoUrl} alt={spec.name} className="w-16 h-16 rounded-full object-cover mb-3 border-2 border-white shadow-sm" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gray-200 mb-3 flex items-center justify-center text-xl font-serif">
+                  {spec.name.charAt(0)}
+                </div>
               )}
-              <span className="text-sm font-bold text-gray-800 dark:text-gray-100 text-center">{spec.name}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 text-center">{spec.role[language]}</span>
+              <span className="text-sm font-bold text-secondary text-center font-serif">{spec.name}</span>
+              <span className="text-xs text-gray-500 text-center font-sans mt-1 uppercase tracking-wider text-[10px]">{spec.role[language]}</span>
             </button>
           ))}
         </div>
@@ -250,11 +250,11 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
       <div>
         {/* Header with Title and "Next Available" Shortcut */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-secondary dark:text-white">{texts.stepDate[language]}</h2>
+          <h2 className="text-xl font-serif font-bold text-secondary">{texts.stepDate[language]}</h2>
           <button
             onClick={handleNextAvailable}
             disabled={findingNext}
-            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-teal-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-secondary transition-colors disabled:opacity-50"
           >
             {findingNext ? (
               <>
@@ -266,12 +266,9 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                </svg>
-                <span>{texts.nextAvailable[language]}</span>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <span className="text-xs font-bold uppercase tracking-wider">{texts.nextAvailable[language]}</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </>
             )}
@@ -279,14 +276,14 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
         </div>
 
         {/* Week Navigation - Arrows on edges, month centered */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 bg-white/50 p-2 rounded-xl backdrop-blur-sm">
           {/* Previous Week Button */}
           <button
             onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
             disabled={weekOffset === 0}
             className={`p-2 rounded-lg transition-all flex-shrink-0 ${weekOffset === 0
-              ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
-              : 'text-gray-500 dark:text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-slate-700'
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'text-gray-500 hover:text-primary hover:bg-white'
               }`}
             aria-label="Previous week"
           >
@@ -300,7 +297,7 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
             <select
               value={getCurrentMonthValue()}
               onChange={(e) => jumpToMonth(e.target.value)}
-              className="appearance-none bg-transparent text-sm font-medium text-gray-600 dark:text-gray-300 cursor-pointer hover:text-primary focus:outline-none focus:text-primary transition-colors capitalize"
+              className="appearance-none bg-transparent text-sm font-bold text-secondary cursor-pointer hover:text-primary focus:outline-none transition-colors uppercase tracking-widest text-center"
             >
               {monthOptions.map(opt => (
                 <option key={opt.value} value={opt.value} className="capitalize">
@@ -308,9 +305,6 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
                 </option>
               ))}
             </select>
-            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
           </div>
 
           {/* Next Week Button */}
@@ -318,8 +312,8 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
             onClick={() => setWeekOffset(Math.min(MAX_WEEKS_AHEAD, weekOffset + 1))}
             disabled={weekOffset >= MAX_WEEKS_AHEAD}
             className={`p-2 rounded-lg transition-all flex-shrink-0 ${weekOffset >= MAX_WEEKS_AHEAD
-              ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
-              : 'text-gray-500 dark:text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-slate-700'
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'text-gray-500 hover:text-primary hover:bg-white'
               }`}
             aria-label="Next week"
           >
@@ -330,7 +324,7 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
         </div>
 
         {/* Date Buttons with Availability Indicators */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {dates.map((date) => {
             const { dayName, dayNum } = formatDate(date);
             const isSelected = selectedDate?.toDateString() === date.toDateString();
@@ -342,22 +336,22 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
                 key={date.toISOString()}
                 onClick={() => !isDisabled && onSelectDate(date)}
                 disabled={isDisabled}
-                className={`min-w-[65px] p-3 rounded-xl transition-all flex flex-col items-center relative ${isSelected
-                  ? 'bg-primary text-white shadow-lg transform scale-105'
+                className={`min-w-[65px] p-3 rounded-xl transition-all flex flex-col items-center relative group ${isSelected
+                  ? 'bg-primary text-white shadow-lg'
                   : isDisabled
-                    ? 'bg-gray-100 dark:bg-slate-800/50 text-gray-400 dark:text-slate-600 cursor-not-allowed'
-                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                    : 'bg-white text-gray-600 hover:bg-surface hover:text-primary hover:shadow-md'
                   }`}
               >
-                <span className="text-xs uppercase font-medium mb-1 opacity-80">{dayName}</span>
-                <span className="text-xl font-bold">{dayNum}</span>
+                <span className="text-[10px] uppercase font-bold mb-1 opacity-70 tracking-wider">{dayName}</span>
+                <span className="text-xl font-serif font-bold">{dayNum}</span>
 
                 {/* Traffic Light Dot - Only show for available dates */}
                 {!isSelected && !loadingWeekAvailability && availability && availability !== 'disabled' && (
                   <span
-                    className={`absolute bottom-1.5 w-2 h-2 rounded-full ${availability === 'available'
-                      ? 'bg-primary' // Brand teal for "many slots"
-                      : 'bg-amber-500' // Rich amber for "limited"
+                    className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${availability === 'available'
+                      ? 'bg-emerald-500' // Subtle green
+                      : 'bg-amber-400' // Soft amber
                       }`}
                   />
                 )}
@@ -371,8 +365,8 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
       <div>
         {loading ? (
           <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-primary"></div>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">{texts.checkingAvailability[language]}</p>
+            <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-primary"></div>
+            <p className="text-gray-400 mt-2 text-xs font-serif italic">{texts.checkingAvailability[language]}</p>
           </div>
         ) : (
           <>
@@ -383,10 +377,10 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
                   disabled={!slot.available}
                   onClick={() => onSelectTime(slot.time)}
                   className={`py-3 px-2 rounded-xl text-sm font-medium transition-all ${!slot.available
-                    ? 'bg-gray-50 dark:bg-slate-800/30 text-gray-300 dark:text-slate-600 cursor-not-allowed'
+                    ? 'bg-transparent text-gray-300 cursor-not-allowed border border-dashed border-gray-200'
                     : selectedTime === slot.time
-                      ? 'bg-primary text-white shadow-md'
-                      : 'bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-slate-700 hover:border-primary hover:bg-white dark:hover:bg-slate-700'
+                      ? 'bg-secondary text-primary shadow-lg ring-1 ring-primary'
+                      : 'bg-white text-gray-700 hover:border-primary hover:text-primary border border-transparent shadow-sm hover:shadow-md'
                     }`}
                 >
                   {slot.time}
@@ -394,10 +388,10 @@ const SpecialistSelection: React.FC<SpecialistSelectionProps> = ({
               ))}
             </div>
             {selectedDate && slots.length === 0 && (
-              <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-sm">{texts.noSlotsDate[language]}</p>
+              <p className="text-center text-gray-400 mt-6 text-sm italic font-serif">{texts.noSlotsDate[language]}</p>
             )}
             {selectedDate && slots.length > 0 && slots.every(s => !s.available) && (
-              <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-sm">{texts.allBooked[language]}</p>
+              <p className="text-center text-gray-400 mt-6 text-sm italic font-serif">{texts.allBooked[language]}</p>
             )}
           </>
         )}

@@ -13,12 +13,14 @@ export default {
     theme: {
         extend: {
             colors: {
-                primary: '#0d9488', // Teal-600
-                secondary: '#0f172a', // Slate-900
-                accent: '#f0f9ff', // Sky-50
+                primary: '#A18267', // Warm Sand
+                secondary: '#3B3418', // Deep Olive
+                accent: '#F9F7F5', // Creamy Beige (Surface)
+                surface: '#F9F7F5', // Creamy Beige alias
             },
             fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
+                sans: ['Lato', 'Inter', 'system-ui', 'sans-serif'],
+                serif: ['Playfair Display', 'serif'],
             },
         },
     },
